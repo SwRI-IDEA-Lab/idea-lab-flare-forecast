@@ -1,0 +1,21 @@
+filename,sample_time,dataset,C_flare_in_12h,M_flare_in_12h,X_flare_in_12h,flare_intensity_in_12h,C_flare_in_24h,M_flare_in_24h,X_flare_in_24h,flare_intensity_in_24h,C_flare_in_48h,M_flare_in_48h,X_flare_in_48h,flare_intensity_in_48h,flare_in_24h,fits_file
+../Data/SPMG_small//spmg.eo100_C1.19920830_154000_TAI.h5,1992-08-30 15:40:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9208/spmg_eo100_C1_19920830_1540.fits
+../Data/SPMG_small//spmg.eo100_C1.19920907_144200_TAI.h5,1992-09-07 14:42:00,spmg,1,1,0,5.7e-05,1,1,0,5.7e-05,1,1,0,5.7e-05,1,SPMG_processed/9209/spmg_eo100_C1_19920907_1442.fits
+../Data/SPMG_small//spmg.eo100_C1.19921118_161400_TAI.h5,1992-11-18 16:14:00,spmg,1,1,0,1.3e-05,1,1,0,1.3e-05,1,1,0,1.3e-05,1,SPMG_processed/9211/spmg_eo100_C1_19921118_1614.fits
+../Data/SPMG_small//spmg.eo100_C1.19930203_163400_TAI.h5,1993-02-03 16:34:00,spmg,1,0,0,1.4e-06,1,0,0,4.4e-06,1,1,0,1e-05,0,SPMG_processed/9302/spmg_eo000_C1_19930203_1634.fits
+../Data/SPMG_small//spmg.eo100_C1.19930319_145900_TAI.h5,1993-03-19 14:59:00,spmg,1,1,0,1.8e-05,1,1,0,1.8e-05,1,1,0,2.1e-05,1,SPMG_processed/9303/spmg_eo000_C1_19930319_1459.fits
+../Data/SPMG_small//spmg.eo100_C1.19930814_142900_TAI.h5,1993-08-14 14:29:00,spmg,0,0,0,0.0,1,0,0,1e-06,1,0,0,1e-06,0,SPMG_processed/9308/spmg_eo000_C1_19930814_1429.fits
+../Data/SPMG_small//spmg.eo100_C1.19931020_143400_TAI.h5,1993-10-20 14:34:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9310/spmg_eo000_C1_19931020_1434.fits
+../Data/SPMG_small//spmg.eo100_C1.19940616_135200_TAI.h5,1994-06-16 13:52:00,spmg,1,0,0,1e-06,1,0,0,1e-06,1,0,0,1e-06,0,SPMG_processed/9406/spmg_eo000_C1_19940616_1352.fits
+../Data/SPMG_small//spmg.eo100_C1.19940923_142000_TAI.h5,1994-09-23 14:20:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9409/spmg_eo000_C1_19940923_1420.fits
+../Data/SPMG_small//spmg.eo100_C1.19950122_173700_TAI.h5,1995-01-22 17:37:00,spmg,0,0,0,0.0,1,0,0,1.4e-06,1,0,0,7.2e-06,0,SPMG_processed/9501/spmg_eo000_C1_19950122_1737.fits
+../Data/SPMG_small//spmg.eo100_C1.19950131_164200_TAI.h5,1995-01-31 16:42:00,spmg,1,0,0,4.4e-06,1,1,0,1.1e-05,1,1,0,1.1e-05,1,SPMG_processed/9501/spmg_eo000_C1_19950131_1642.fits
+../Data/SPMG_small//spmg.eo100_C1.19950219_172300_TAI.h5,1995-02-19 17:23:00,spmg,1,1,0,1.1e-05,1,1,0,1.1e-05,1,1,0,1.1e-05,1,SPMG_processed/9502/spmg_eo000_C1_19950219_1723.fits
+../Data/SPMG_small//spmg.eo100_C1.19951028_144600_TAI.h5,1995-10-28 14:46:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9510/spmg_eo000_C1_19951028_1446.fits
+../Data/SPMG_small//spmg.eo100_C1.19970319_142900_TAI.h5,1997-03-19 14:29:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9703/spmg_eo000_C1_19970319_1429.fits
+../Data/SPMG_small//spmg.eo100_C1.19970424_155600_TAI.h5,1997-04-24 15:56:00,spmg,0,0,0,0.0,0,0,0,0.0,0,0,0,0.0,0,SPMG_processed/9704/spmg_eo000_C1_19970424_1556.fits
+../Data/SPMG_small//spmg.eo100_C1.19970908_190200_TAI.h5,1997-09-08 19:02:00,spmg,1,1,0,1e-05,1,1,0,1e-05,1,1,0,1e-05,1,SPMG_processed/9709/spmg_eo000_C1_19970908_1902.fits
+../Data/SPMG_small//spmg.eo100_C1.19980702_135300_TAI.h5,1998-07-02 13:53:00,spmg,0,1,0,1.2e-05,1,1,0,1.2e-05,1,1,0,1.2e-05,1,SPMG_processed/9807/spmg_eo000_C1_19980702_1353.fits
+../Data/SPMG_small//spmg.eo100_C1.19980824_161800_TAI.h5,1998-08-24 16:18:00,spmg,0,0,1,0.0001,0,0,1,0.0001,0,0,1,0.0001,1,SPMG_processed/9808/spmg_eo000_C1_19980824_1618.fits
+../Data/SPMG_small//spmg.eo100_C1.19981007_160300_TAI.h5,1998-10-07 16:03:00,spmg,1,1,0,2.3e-05,1,1,0,2.3e-05,1,1,0,2.3e-05,1,SPMG_processed/9810/spmg_eo000_C1_19981007_1603.fits
+../Data/SPMG_small//spmg.eo100_C1.19990120_164300_TAI.h5,1999-01-20 16:43:00,spmg,0,1,0,5.2e-05,1,1,0,5.2e-05,1,1,0,5.2e-05,1,SPMG_processed/9901/spmg_eo000_C1_19990120_1643.fits
