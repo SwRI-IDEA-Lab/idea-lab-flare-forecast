@@ -43,5 +43,7 @@ class MagnetogramDataSet(torch.utils.data.Dataset):
         # scale between -1 and 1
         img = img/maxval
 
+        img = torch.Tensor(img)
+
         return [filename,img,label]
     
