@@ -1,4 +1,5 @@
 import torch
+from torchvision import transforms
 import h5py
 import numpy as np
 
@@ -8,11 +9,17 @@ class MagnetogramDataSet(torch.utils.data.Dataset):
         
         Parameters:
             df (dataframe):     Pandas dataframe containing filenames and labels 
+            dim (int):          Square dimension for resized magnetograms
+            transform:          torchvision transform to apply to data (default is ToTensor())
     """
-    def __init__(self,df):
+    def __init__(self,df,dim=256,transform=transforms.ToTensor()):
         self.name_frame = df.loc[:,'filename']
         self.label_frame = df.loc[:,'flare']
         self.dataset_frame = df.loc[:,'dataset']
+        self.transform = transforms.Compose([
+            transform,
+            transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
+        ])
 
     def __len__(self):
         return len(self.name_frame)
@@ -43,7 +50,13 @@ class MagnetogramDataSet(torch.utils.data.Dataset):
         # scale between -1 and 1
         img = img/maxval
 
-        img = torch.Tensor(img)
+        # transform image
+        img = self.transform(img)
 
         return [filename,img,label]
     
+
+def generateTrainValidData(df,split):
+    trainDataSet = MagnetogramDataSet(df)
+    validDataSet = MagnetogramDataSet(df)
+    return [trainDataSet,validDataSet]
