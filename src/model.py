@@ -1,6 +1,6 @@
-from torch import nn
+from torch import nn, optim
 import torch.nn.functional as F
-
+import pytorch_lightning as pl
 
 class convnet_sc(nn.Module):
     """ 
@@ -73,6 +73,7 @@ class convnet_sc(nn.Module):
             module.bias.data.zero_()
 
     def forward(self,x):
+        
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
@@ -82,3 +83,19 @@ class convnet_sc(nn.Module):
         x = self.fcl(x)
         return x
 
+class LitConvNet(pl.LightningModule):
+    def __init__(self,model):
+        super().__init__()
+        self.model = model
+        self.loss = nn.BCELoss()
+
+    def training_step(self,batch,batch_idx):
+        fname, x, y = batch
+        y = y.view(y.shape[0],-1)
+        y_hat = self.model(x)
+        loss = self.loss(y_hat,y)
+        return loss
+
+    def configure_optimizers(self,lr=1e-3,weight_decay=1e-3):
+        optimizer = optim.Adagrad(self.model.parameters(),lr,weight_decay)
+        return optimizer

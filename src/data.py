@@ -37,7 +37,7 @@ class MagnetogramDataSet(torch.utils.data.Dataset):
         filename = self.name_frame.iloc[idx]
         img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
         img = np.nan_to_num(img)
-        label = self.label_frame.iloc[idx]
+        label = self.label_frame.iloc[idx].astype(np.float32)
 
         # Normalize magnetogram data
         # 1.3 calibration factor for MDI data
