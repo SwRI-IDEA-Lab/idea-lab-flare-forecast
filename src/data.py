@@ -44,7 +44,7 @@ class MagnetogramDataSet(torch.utils.data.Dataset):
         if self.dataset_frame.iloc[idx] == 'mdi':
             img = img/1.3
         # clip magnetogram data within max value
-        maxval = 2000  # Gauss
+        maxval = 1500  # Gauss
         img[np.where(img>maxval)] = maxval
         img[np.where(img<-maxval)] = -maxval
         # scale between -1 and 1

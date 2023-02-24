@@ -13,7 +13,7 @@ class LightningModuleTest(unittest.TestCase):
         self.df = pd.read_csv('../Data/labels_mdi_small.csv')
         self.df['flare'] = self.df['flare_in_24h']
         self.dataset = MagnetogramDataSet(self.df)
-        self.train_loader = torch.utils.data.DataLoader(self.dataset,batch_size=2)
+        self.train_loader = torch.utils.data.DataLoader(self.dataset,batch_size=10)
 
     def test_litmodelExists(self):
         self.assertIsNotNone(self.litmodel)
@@ -26,6 +26,13 @@ class LightningModuleTest(unittest.TestCase):
     def test_litmodelOptimizer(self):
         self.assertIsInstance(self.litmodel.configure_optimizers(),torch.optim.Optimizer)
 
+    def test_predictModel(self):
+        batch = next(iter(self.train_loader))
+        batch_idx = 0
+        pred = self.litmodel.predict_step(batch,batch_idx)
+        self.assertEqual(len(pred),2)
+        self.assertTrue(torch.is_tensor(pred[0]))
+        self.assertTrue(torch.is_tensor(pred[1]))
 
 if __name__ == "__main__":
     unittest.main()
