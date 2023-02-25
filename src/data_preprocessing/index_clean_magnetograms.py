@@ -10,14 +10,16 @@ import csv
 import tarfile
 from datetime import datetime,timedelta
 from pathlib import Path
+from helper import extract_date_time
 # Remove Warnings
 import warnings
 warnings.filterwarnings('ignore')
 
 # set up
-data = 'SPMG'
+data = 'HMI'
+
 root_dir = Path('../../Data/')
-filename = root_dir / 'index_spmg.csv'
+filename = root_dir / ('index_'+data+'.csv')
 
 # header data for csv file
 header = ['filename','date','time','timestamp']
@@ -32,42 +34,9 @@ for year in sorted(os.listdir(root_dir / data)):
     for file in sorted(os.listdir(root_dir / data / year)):
 
         # extract date and time from filename
-        extra_day = 0   # placeholder for correcting MWO dates
-        if data == 'MDI':        
-            file_split = file.split('.')
-            date = file_split[-3].split('_')[0]
-            time = file_split[-3].split('_')[1]
-        elif data == 'HMI':
-            file_split = file.split('.')
-            date = file_split[-4].split('_')[0]
-            time = file_split[-4].split('_')[1] 
-        elif data == 'SPMG' or data == '512':
-            file_split = file.strip('.fits').split('_')
-            date = file_split[-2]
-            time = file_split[-1]
-        elif data == 'MWO':
-            # multiple naming conventions for Mt Wilson Observatory data
-            file_split = file.strip('.fits').split('_')
-            if year[0:2]=='YR':
-                break
-            if int(year) < 1995:
-                date = '19'+file_split[-2][1:]
-                time = file_split[-1]
-            elif int(year) < 2000:
-                date = '19'+file_split[-3].strip('m')
-                time = file_split[-2]
-            else:
-                date = '20'+file_split[-3].strip('m')
-                time = file_split[-2]    
-            # correct errors in filenames from time rounding
-            if int(time[2:])>59:
-                time = str(int(time[:2])+1) + str(int(time[2:])-60).zfill(2)
-            if int(time[:2])>23:
-                time = str(int(time[:2])-24).zfill(2)+time[2:]
-                extra_day = 1
-
-        # convert to datetime object
-        timestamp = datetime.strptime(date+time,'%Y%m%d%H%M%S') + timedelta(days=extra_day)
+        date,time,timestamp = extract_date_time(file,data,year)
+        if date == None:
+            continue
         
         # store filename, date, time and timestamp 
         index_data = [root_dir/data/year/file,date,time,timestamp]
