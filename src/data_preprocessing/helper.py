@@ -57,6 +57,7 @@ def extract_date_time(file,data,year):
             extra_day = 1
         time = time.ljust(6,'0')
         timestamp = datetime.strptime(date+time,'%Y%m%d%H%M%S') + timedelta(days=extra_day)
+        date = datetime.strftime(timestamp,'%Y%m%d')
     else:
         raise ValueError('Invalid data type: ',data,'\n Must be MDI,HMI,SPMG,512 or MWO')
 
