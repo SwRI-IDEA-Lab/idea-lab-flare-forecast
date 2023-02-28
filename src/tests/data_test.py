@@ -84,14 +84,3 @@ if __name__ == "__main__":
     unittest.main()
 
 
-
-"""
-_MODEL_DIR = os.path.abspath(__file__).split('/')[:-1]
-_SRC_DIR = os.path.join('/',*_MODEL_DIR[:-1])
-sys.path.append(_SRC_DIR)
-
-
-import sys,os
-sys.path.append(os.getcwd())
-
-"""

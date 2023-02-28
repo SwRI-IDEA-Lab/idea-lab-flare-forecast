@@ -2,6 +2,7 @@ from torch import nn, optim
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
+import torchmetrics
 
 class convnet_sc(nn.Module):
     """ 
@@ -101,7 +102,14 @@ class LitConvNet(pl.LightningModule):
     def __init__(self,model):
         super().__init__()
         self.model = model
-        self.loss = nn.BCELoss()    # define loss function
+        # define loss function
+        self.loss = nn.BCELoss()    
+        # define metrics
+        self.train_acc = torchmetrics.Accuracy(task='binary')
+        self.val_acc = torchmetrics.Accuracy(task='binary')
+        self.val_aps = torchmetrics.AveragePrecision(task='binary')
+        self.val_f1 = torchmetrics.F1Score(task='binary')
+        self.val_bss = torchmetrics.MeanSquaredError()
 
     def training_step(self,batch,batch_idx):
         """
@@ -118,13 +126,42 @@ class LitConvNet(pl.LightningModule):
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
         y_hat = self.model(x)
-        loss = self.loss(y_hat,y)
+        loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        self.train_acc(y_hat,y)
         self.log('loss',loss)
+        self.log('train_acc',self.train_acc,on_step=True,on_epoch=False)
         return loss
+    
+    def validation_step(self,batch,batch_idx):
+        """
+            Runs the model on the validation set and logs validation loss 
+            and other metrics.
+
+            Parameters:
+                batch:                  batch from a DataLoader
+                batch_idx:              index of batch                  
+        """
+        fname, x, y = batch
+        y = y.view(y.shape[0],-1)
+        # forward pass
+        y_hat = self.model(x)
+        val_loss = self.loss(y_hat,y.type(torch.FloatTensor))
+
+        # calculate metrics
+        self.val_acc(y_hat,y)
+        self.val_aps(y_hat,y)
+        self.val_f1(y_hat,y)
+        self.val_bss(y_hat,y)
+
+        self.log('val_loss',val_loss)
+        self.log('val_acc',self.val_acc)
+        self.log('val_aps',self.val_aps)
+        self.log('val_f1',self.val_f1)
+        self.log('val_bss',self.val_bss)
 
     def configure_optimizers(self,lr=1e-4,weight_decay=1e-2):
         """
-            Sets up the optimizer. Here we use Adagrad.
+            Sets up the optimizer.
 
             Parameters:
                 lr (float):             learning rate

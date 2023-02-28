@@ -6,34 +6,40 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary
 from model import convnet_sc,LitConvNet
-from data import MagnetogramDataSet
+from data import MagnetogramDataModule
 import pandas as pd
 import numpy as np
+import wandb
+from pytorch_lightning.loggers import WandbLogger
 
 def main():
     # set dataset file and parameters
-    df = pd.read_csv('../Data/labels_mdi_small.csv')
+    datafile = 'Data/labels_mdi_small.csv'
     window = 24     # forecast window (hours)
+    dim = 256
 
     # set seeds
     pl.seed_everything(42,workers=True)
 
-    # define dataloaders
-    df['flare'] = df['flare_intensity_in_'+str(window)+'h']>=1e-5
-    dataset = MagnetogramDataSet(df)
-    train_loader = DataLoader(dataset,batch_size=20,shuffle=True,num_workers=4)
-    test_loader = DataLoader(dataset,batch_size=20,shuffle=False)
+    # define data module
+    data = MagnetogramDataModule(data_file=datafile,forecast_window=window,dim=dim)
 
     # define model
-    model = convnet_sc(dim=256,length=1,dropoutRatio=0)
+    model = convnet_sc(dim=dim,length=1,dropoutRatio=0)
     classifier = LitConvNet(model)
 
+    # initialize wandb logger
+    wandb_logger = WandbLogger(project='flare-forecast')
+
+    # add parameters to wandb config
+    wandb_logger.experiment.config['forecast_window'] = window
+
     # train model
-    trainer = pl.Trainer(deterministic=True,max_epochs=100,callbacks=[ModelSummary(max_depth=2)])
-    trainer.fit(model=classifier,train_dataloaders=train_loader)
+    trainer = pl.Trainer(deterministic=True,max_epochs=100,callbacks=[ModelSummary(max_depth=2)],log_every_n_steps=1,logger=wandb_logger)
+    trainer.fit(model=classifier,datamodule=data)
 
     # evaluate model
-    predictions = trainer.predict(classifier,test_loader)
+    predictions = trainer.predict(classifier,data.val_dataloader())
     y_pred = predictions[0][0]
     y_true = predictions[0][1]
     print('Predicted: ',torch.transpose(y_pred,0,1))
