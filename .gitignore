@@ -131,4 +131,9 @@ dmypy.json
 # data files
 *.h5
 *.png
+*.csv
+*.fits
+
+# lightning logs
+src/lightning_logs/*
 
