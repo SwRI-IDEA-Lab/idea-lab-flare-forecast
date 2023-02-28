@@ -1,20 +1,29 @@
 import unittest
-from data import MagnetogramDataSet, generateTrainValidData
+from data import MagnetogramDataSet, MagnetogramDataModule
 import pandas as pd
 import numpy as np
 import torch
+import pytorch_lightning as pl
+from pathlib import Path
+from torchvision import transforms
 import matplotlib.pyplot as plt
 
 class DataTest(unittest.TestCase):
 
     def setUp(self):
-        self.df = pd.read_csv('../Data/labels_mdi_small.csv')
+        self.datafile = '../Data/labels_mdi_small.csv'
+        self.df = pd.read_csv(self.datafile)
         self.df['flare'] = self.df['flare_in_24h']
         self.labels = [0,1]
         self.dim = 256
-        self.dataset = MagnetogramDataSet(self.df,self.dim)
+        self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize(256,transforms.InterpolationMode.BILINEAR,antialias=True),
+        ])
+        self.dataset = MagnetogramDataSet(self.df,self.transform)
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.trainsplit = 0.7
+        self.datamodule = MagnetogramDataModule(self.datafile)
 
     def test_datasetExists(self):
         self.assertGreaterEqual(len(self.dataset),0)
@@ -47,11 +56,23 @@ class DataTest(unittest.TestCase):
             plt.savefig('../test_img_'+str(idx)+'.png')
 
 
-    def test_trainvalidSplitExists(self):
-        trainDataSet, validDataSet = generateTrainValidData(self.df,self.trainsplit)
-        self.assertIsInstance(trainDataSet,torch.utils.data.Dataset)
-        self.assertIsInstance(validDataSet,torch.utils.data.Dataset)
+    def test_datamoduleLoadData(self):
+        self.datamodule.prepare_data()
+        self.assertIsInstance(self.datamodule.df,pd.DataFrame)
 
+    def test_datamoduleSetup(self):
+        self.datamodule.prepare_data()
+        self.datamodule.setup('fit')
+        self.assertIsInstance(self.datamodule.train_set,torch.utils.data.Dataset)
+        self.assertIsInstance(self.datamodule.val_set,torch.utils.data.Dataset)
+        self.assertIsInstance(self.datamodule.test_set,torch.utils.data.Dataset)
+
+    def test_datamoduleDataloaders(self):
+        self.datamodule.prepare_data()
+        self.datamodule.setup('fit')
+        self.assertIsInstance(self.datamodule.train_dataloader(),torch.utils.data.DataLoader)
+        self.assertIsInstance(self.datamodule.val_dataloader(),torch.utils.data.DataLoader)
+        self.assertIsInstance(self.datamodule.test_dataloader(),torch.utils.data.DataLoader)
 
 if __name__ == "__main__":
     unittest.main()
