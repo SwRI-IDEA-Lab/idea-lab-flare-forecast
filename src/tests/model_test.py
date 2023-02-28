@@ -1,15 +1,18 @@
+import sys,os
+sys.path.append(os.getcwd())
 import unittest
-from model import convnet_sc
+from src.model import convnet_sc
 import numpy as np
 import torch
 import h5py
 import glob
+from pathlib import Path
 
 
 class ModelTest(unittest.TestCase):
 
     def setUp(self):
-        self.files = glob.glob('../Data/MDI_small/*')
+        self.files = glob.glob('Data/MDI_small/*')
         filename = self.files[0]
         self.x = torch.tensor(np.array(h5py.File(filename, 'r')['magnetogram']).astype(np.float32))[None,None,:,:]
         self.x[torch.isnan(self.x)]=0
