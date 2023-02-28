@@ -1,4 +1,5 @@
 from torch import nn, optim
+import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
@@ -45,14 +46,16 @@ class convnet_sc(nn.Module):
         )
 
         self.fcl = nn.Sequential(
-            nn.Linear(43008,100),
+            nn.LazyLinear(100),
             nn.ReLU(),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
             nn.Sigmoid()
         )
-
+        
+        self.forward(torch.ones(1,1,dim,dim))
         self.apply(self._init_weights)
+        
 
     def _init_weights(self,module):
         """
@@ -66,8 +69,12 @@ class convnet_sc(nn.Module):
             nn.init.xavier_uniform_(module.weight)
             module.bias.data.zero_()
 
-
         if isinstance(module,nn.Linear):
+            # nn.init.zeros_(module.weight)
+            nn.init.normal_(module.weight)
+            module.bias.data.zero_()
+
+        if isinstance(module,nn.LazyLinear):
             # nn.init.zeros_(module.weight)
             nn.init.normal_(module.weight)
             module.bias.data.zero_()
