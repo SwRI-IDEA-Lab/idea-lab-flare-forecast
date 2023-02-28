@@ -6,3 +6,4 @@ dependencies:
   - pytorch-lightning=1.9.*
   - sunpy=4.1.*
   - snakemake
+  - torchvision

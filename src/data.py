@@ -38,14 +38,14 @@ class MagnetogramDataSet(Dataset):
         filename = self.name_frame.iloc[idx]
         img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
         img = np.nan_to_num(img)
-        label = self.label_frame.iloc[idx]
+        label = self.label_frame.iloc[idx].astype(np.float32)
 
         # Normalize magnetogram data
         # 1.3 calibration factor for MDI data
         if self.dataset_frame.iloc[idx] == 'mdi':
             img = img/1.3
         # clip magnetogram data within max value
-        maxval = 2000  # Gauss
+        maxval = 1500  # Gauss
         img[np.where(img>maxval)] = maxval
         img[np.where(img<-maxval)] = -maxval
         # scale between -1 and 1
