@@ -59,8 +59,7 @@ class DataTest(unittest.TestCase):
             plt.imshow(data[0,:,:],vmin=-1,vmax=1)
             plt.colorbar()
             plt.title(item[0].split('/')[-1]+' flare label: '+str(item[2]))
-            plt.savefig('../test_img_'+str(idx)+'.png')
-
+            plt.savefig('src/tests/test_img_'+str(idx)+'.png')
 
     def test_datamoduleLoadData(self):
         self.datamodule.prepare_data()
@@ -82,16 +81,3 @@ class DataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-"""
-_MODEL_DIR = os.path.abspath(__file__).split('/')[:-1]
-_SRC_DIR = os.path.join('/',*_MODEL_DIR[:-1])
-sys.path.append(_SRC_DIR)
-
-
-import sys,os
-sys.path.append(os.getcwd())
-
-"""
