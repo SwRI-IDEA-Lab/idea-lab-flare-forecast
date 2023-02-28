@@ -115,7 +115,7 @@ class LitConvNet(pl.LightningModule):
         self.log('loss',loss)
         return loss
 
-    def configure_optimizers(self,lr=1e-4,weight_decay=1e-3):
+    def configure_optimizers(self,lr=1e-4,weight_decay=1e-2):
         """
             Sets up the optimizer. Here we use Adagrad.
 
@@ -126,7 +126,7 @@ class LitConvNet(pl.LightningModule):
             Returns:
                 optimizer:              A torch optimizer
         """
-        optimizer = optim.Adagrad(self.model.parameters(),lr,weight_decay)
+        optimizer = optim.Adam(self.model.parameters(),lr=lr,weight_decay=weight_decay)
         return optimizer
 
     def predict_step(self,batch,batch_idx,dataloader_idx=0):

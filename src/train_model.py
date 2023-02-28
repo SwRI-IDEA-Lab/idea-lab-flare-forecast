@@ -13,7 +13,7 @@ import numpy as np
 def main():
     # set dataset file and parameters
     df = pd.read_csv('../Data/labels_mdi_small.csv')
-    window = 12     # forecast window (hours)
+    window = 24     # forecast window (hours)
 
     # set seeds
     pl.seed_everything(42,workers=True)
@@ -21,7 +21,7 @@ def main():
     # define dataloaders
     df['flare'] = df['flare_intensity_in_'+str(window)+'h']>=1e-5
     dataset = MagnetogramDataSet(df)
-    train_loader = DataLoader(dataset,batch_size=5,shuffle=True,num_workers=4)
+    train_loader = DataLoader(dataset,batch_size=20,shuffle=True,num_workers=4)
     test_loader = DataLoader(dataset,batch_size=20,shuffle=False)
 
     # define model
@@ -29,7 +29,7 @@ def main():
     classifier = LitConvNet(model)
 
     # train model
-    trainer = pl.Trainer(deterministic=True,max_epochs=5,callbacks=[ModelSummary(max_depth=2)])
+    trainer = pl.Trainer(deterministic=True,max_epochs=100,callbacks=[ModelSummary(max_depth=2)])
     trainer.fit(model=classifier,train_dataloaders=train_loader)
 
     # evaluate model
