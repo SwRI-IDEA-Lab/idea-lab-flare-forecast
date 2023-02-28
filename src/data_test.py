@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 class DataTest(unittest.TestCase):
 
     def setUp(self):
-        self.df = pd.read_csv('../Data/labels_mdi_small.csv')
+        self.datafile = '../Data/labels_mdi_small.csv'
+        self.df = pd.read_csv(self.datafile)
         self.df['flare'] = self.df['flare_in_24h']
         self.labels = [0,1]
         self.dim = 256

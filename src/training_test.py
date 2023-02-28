@@ -5,10 +5,16 @@ import numpy as np
 import torch
 import h5py
 import pandas as pd
+import glob
 
 class LightningModuleTest(unittest.TestCase):
     def setUp(self):
-        self.model = convnet_sc()
+        self.files = glob.glob('../Data/MDI_small/*')
+        filename = self.files[0]
+        self.x = torch.tensor(np.array(h5py.File(filename, 'r')['magnetogram']).astype(np.float32))[None,None,:,:]
+        self.x[torch.isnan(self.x)]=0
+        self.dim = self.x.shape[-1]
+        self.model = convnet_sc(dim=self.dim)
         self.litmodel = LitConvNet(self.model)
         self.df = pd.read_csv('../Data/labels_mdi_small.csv')
         self.df['flare'] = self.df['flare_in_24h']
