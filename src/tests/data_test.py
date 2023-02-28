@@ -1,5 +1,8 @@
+import sys,os
+sys.path.append(os.getcwd())
+
 import unittest
-from data import MagnetogramDataSet, MagnetogramDataModule
+from src.data import MagnetogramDataSet, MagnetogramDataModule
 import pandas as pd
 import numpy as np
 import torch
@@ -8,17 +11,20 @@ from pathlib import Path
 from torchvision import transforms
 import matplotlib.pyplot as plt
 
+
+
+
 class DataTest(unittest.TestCase):
 
     def setUp(self):
-        self.datafile = '../Data/labels_mdi_small.csv'
+        self.datafile = 'Data/labels_mdi_small.csv'
         self.df = pd.read_csv(self.datafile)
         self.df['flare'] = self.df['flare_in_24h']
         self.labels = [0,1]
         self.dim = 256
         self.transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Resize(256,transforms.InterpolationMode.BILINEAR,antialias=True),
+            transforms.Resize(self.dim,transforms.InterpolationMode.BILINEAR,antialias=True),
         ])
         self.dataset = MagnetogramDataSet(self.df,self.transform)
         self.idx = 0        # index into dataset (must be within length of self.dataset)
@@ -76,3 +82,16 @@ class DataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+"""
+_MODEL_DIR = os.path.abspath(__file__).split('/')[:-1]
+_SRC_DIR = os.path.join('/',*_MODEL_DIR[:-1])
+sys.path.append(_SRC_DIR)
+
+
+import sys,os
+sys.path.append(os.getcwd())
+
+"""
