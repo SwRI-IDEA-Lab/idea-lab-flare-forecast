@@ -16,6 +16,7 @@ from pathlib import Path
 from src.data_preprocessing.helper import extract_date_time
 import argparse
 import sys
+import pandas as pd
 # Remove Warnings
 import warnings
 warnings.filterwarnings('ignore')
@@ -107,6 +108,23 @@ def index_year(root_dir,data,year,out_writer):
 
     return n
 
+def merge_indices_by_date(root_dir,datasets):
+    """
+    Merge generated indices across datasets by date
+
+    Parameters:
+        root_dir (Path):    location of index files
+        datasets (list):    names of data being indexed and merged
+    """
+    df_merged = pd.DataFrame({'date':[]})
+    for data in datasets:
+        filename = root_dir/('index_'+data+'.csv')
+        df = pd.read_csv(filename)
+        df.rename(columns={'filename':'fname_'+data,'time':'time_'+data,'timestamp':'timestamp_'+data},inplace=True)
+        df_merged = df_merged.merge(df,how='outer',on='date',sort=True)
+    print(len(df_merged),'entries in merged index')
+    return df_merged
+
 def main():
     datasets = parse_args().data
     root_dir = Path('Data')
@@ -132,6 +150,11 @@ def main():
 
         out_file.close()
         print(N,'files for',data)
+    
+    if len(datasets)>0:
+        df_merged = merge_indices_by_date(root_dir,datasets)
+        filename_merged = '_'.join([data for data in datasets])
+        df_merged.to_csv(root_dir/('index_'+filename_merged),index=False)
 
 if __name__ == '__main__':
     main()
