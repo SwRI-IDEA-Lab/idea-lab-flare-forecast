@@ -20,11 +20,11 @@ class IndexingTest(unittest.TestCase):
         self.filename='src/tests/index_MDI.csv'
         self.csv_file = open(self.filename,'w')
         self.csv_writer = csv.writer(self.csv_file,delimiter=',')
-        self.csv_writer.writerow(['filename','date','time','timestamp'])
-        self.df_HMI = pd.DataFrame({'filename':['hmi.fits'],
+        self.csv_writer.writerow(['fname_MDI','date','time_MDI','timestamp_MDI'])
+        self.df_HMI = pd.DataFrame({'fname_HMI':['hmi.fits'],
                                     'date':[19990204],
-                                    'time':[000000],
-                                    'timestamp':[datetime(1999,2,1,0)]})
+                                    'time_HMI':[000000],
+                                    'timestamp_HMI':[datetime(1999,2,1,0)]})
         self.fileHMI = self.df_HMI.to_csv('src/tests/index_HMI.csv',index=False)
 
     def test_parser(self):
