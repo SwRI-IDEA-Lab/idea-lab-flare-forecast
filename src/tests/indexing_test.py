@@ -56,7 +56,7 @@ class IndexingTest(unittest.TestCase):
     def test_mergeIndices(self):
         n = index_year(self.root_dir,self.data,self.year,self.csv_writer)
         self.csv_file.close()
-        df_merged = merge_indices(Path('src/tests'),self.multiple_data)
+        df_merged = merge_indices_by_date(Path('src/tests'),self.multiple_data)
         self.assertIsInstance(df_merged,pd.DataFrame)
         self.assertTrue('date' in df_merged.columns)
         for data in self.multiple_data:
