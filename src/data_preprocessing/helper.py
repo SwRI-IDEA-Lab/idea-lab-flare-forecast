@@ -3,6 +3,8 @@ Helper functions for data pre-processing
 """
 
 from datetime import datetime,timedelta
+import numpy as np
+from src.utils.utils import mapPixelArea, makeBMask
 
 def extract_date_time(file,data,year):
     """
@@ -63,3 +65,42 @@ def extract_date_time(file,data,year):
 
 
     return date,time,timestamp
+
+def check_quality(data,header):
+    """
+    Check fits header files for quality keyword and handles MDI or HMI 
+    bad quality values.
+
+    Parameters:
+        data (str):     which dataset we are checking
+        header (dict or fits header)
+    
+    Returns:
+        bool:           True if no bad quality flags for MDI or HMI data
+    """
+    if data == 'MDI':
+        # for MDI, check for many missing values
+        if header['MISSVALS'] > 2000:
+            return False
+    elif data == 'HMI':
+        # for HMI, good quality images have quality keyword 0
+        if header['QUALITY'] != 0:
+            return False
+    return True
+
+def compute_tot_flux(map):
+    """
+    Calculate total unsigned flux for magnetogram by multiplying with pixel area
+    and masking only larger regions of flux
+
+    Parameters:
+        map (sunpy map):    LOS magnetogram
+    
+    Returns:
+        tot_usflux (float): total unsigned magnetic flux
+    """
+    area_map = mapPixelArea(map)
+    Bdata = map.data*area_map.data
+    Bmask = makeBMask(Bdata,Blim=50,area_threshold=64,connectivity=2,dilationR=8)
+    tot_usflux = np.nansum(np.abs(Bdata*Bmask))
+    return tot_usflux
