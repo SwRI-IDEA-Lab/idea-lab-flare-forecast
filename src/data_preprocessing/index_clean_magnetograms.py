@@ -100,8 +100,6 @@ def index_year(root_dir,data,year,out_writer):
         if not check_quality(data,header):
             continue
 
-        data_fits.close()
-
         # write metadata to file
         out_writer.writerow(index_data)
         n += 1
@@ -118,9 +116,8 @@ def merge_indices_by_date(root_dir,datasets):
     """
     df_merged = pd.DataFrame({'date':[]})
     for data in datasets:
-        filename = root_dir/('index_'+data+'.csv')
+        filename = root_dir/('index_'+data.upper()+'.csv')
         df = pd.read_csv(filename)
-        df.rename(columns={'filename':'fname_'+data,'time':'time_'+data,'timestamp':'timestamp_'+data},inplace=True)
         df_merged = df_merged.merge(df,how='outer',on='date',sort=True)
     print(len(df_merged),'entries in merged index')
     return df_merged
@@ -134,7 +131,7 @@ def main():
         filename = root_dir / ('index_'+data+'.csv')
 
         # header data for csv file
-        header = ['filename','date','time','timestamp']
+        header = ['fname_'+data,'date','time_'+data,'timestamp_'+data]
 
         # open csv file writer
         out_file = open(filename,'w')
@@ -151,10 +148,10 @@ def main():
         out_file.close()
         print(N,'files for',data)
     
-    if len(datasets)>0:
+    if len(datasets)>1:
         df_merged = merge_indices_by_date(root_dir,datasets)
-        filename_merged = '_'.join([data for data in datasets])
-        df_merged.to_csv(root_dir/('index_'+filename_merged),index=False)
+        filename_merged = '_'.join([data.upper() for data in datasets])
+        df_merged.to_csv(root_dir/('index_'+filename_merged+'.csv'),sep=',',na_rep=' ',index=False)
 
 if __name__ == '__main__':
     main()
