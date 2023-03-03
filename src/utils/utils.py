@@ -303,6 +303,22 @@ def reprojectToVirtualInstrument(map,
                                  scale=u.Quantity([0.6,0.6],u.arcsec/u.pixel)):
     """
     Reproject map to an instrument at specified radius and plate scale
+    
+    Parameters
+    ----------
+    map : sunpy map
+        Map containing observations
+    dim : int
+        Desired resolution of reprojected map
+    radius: u.au
+        Distance to sun of desired virtual observation
+    scale: [,] u.arcsec/u.pixel
+        Virtual observation pixel scale 
+        
+    Returns
+    -------
+    out_map : sunpy map
+        Reprojected map
     """
     if dim == None:
         # keep at the original resolution
