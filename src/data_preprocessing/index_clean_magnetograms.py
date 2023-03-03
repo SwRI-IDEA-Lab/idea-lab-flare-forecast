@@ -100,8 +100,6 @@ def index_year(root_dir,data,year,out_writer):
         if not check_quality(data,header):
             continue
 
-        data_fits.close()
-
         # write metadata to file
         out_writer.writerow(index_data)
         n += 1
