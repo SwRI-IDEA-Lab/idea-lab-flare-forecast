@@ -45,7 +45,7 @@ class MagnetogramDataSet(Dataset):
         if self.dataset_frame.iloc[idx] == 'mdi':
             img = img/1.3
         # clip magnetogram data within max value
-        maxval = 1500  # Gauss
+        maxval = 1000  # Gauss
         img[np.where(img>maxval)] = maxval
         img[np.where(img<-maxval)] = -maxval
         # scale between -1 and 1
@@ -66,13 +66,14 @@ class MagnetogramDataModule(pl.LightningDataModule):
             data_file (str):        file containing magnetogram filenames and labels
             forecast_window (int):  number of hours for forecast
             dim (int):              dimension for scaling data
+            batch (int):            batch size for all dataloaders
     """
-    def __init__(self, data_file: str, forecast_window: int = 24, dim: int = 256):
+    def __init__(self, data_file: str, forecast_window: int = 24, dim: int = 256, batch: int = 32):
         super().__init__()
         self.data_file = data_file
         self.forecast_window = forecast_window
         self.split_type = 'random'
-        self.batch_size = 32
+        self.batch_size = batch
         # define data transforms
         self.transform = transforms.Compose([
             transforms.ToTensor(),

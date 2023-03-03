@@ -19,36 +19,36 @@ class convnet_sc(nn.Module):
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block2 = nn.Sequential(
             nn.Conv2d(32, 32, (3,3),padding='valid'),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block3 = nn.Sequential(
             nn.Conv2d(32, 64, (3,3),padding='same'),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block4 = nn.Sequential(
             nn.ZeroPad2d((2,2)),
             nn.Conv2d(64, 128, (3,3),padding='valid'),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block5 = nn.Sequential(
             nn.Conv2d(128, 256, (3,3),padding='valid'),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
         )
 
         self.fcl = nn.Sequential(
             nn.LazyLinear(100),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
             nn.Sigmoid()
@@ -97,11 +97,14 @@ class LitConvNet(pl.LightningModule):
 
         Parameters:
             model (torch.nn.Module):    a PyTorch model that ingests magnetograms and outputs a binary classification
-            
+            lr (float):                 learning rate
+            wd (float):                 L2 regularization parameter
     """
-    def __init__(self,model):
+    def __init__(self,model,lr=1e-4,wd=1e-2):
         super().__init__()
         self.model = model
+        self.lr = lr
+        self.weight_decay = wd
         # define loss function
         self.loss = nn.BCELoss()    
         # define metrics
@@ -110,6 +113,7 @@ class LitConvNet(pl.LightningModule):
         self.val_aps = torchmetrics.AveragePrecision(task='binary')
         self.val_f1 = torchmetrics.F1Score(task='binary')
         self.val_bss = torchmetrics.MeanSquaredError()
+        self.save_hyperparameters(ignore=['model'])
 
     def training_step(self,batch,batch_idx):
         """
@@ -159,7 +163,7 @@ class LitConvNet(pl.LightningModule):
         self.log('val_f1',self.val_f1)
         self.log('val_bss',self.val_bss)
 
-    def configure_optimizers(self,lr=1e-4,weight_decay=1e-2):
+    def configure_optimizers(self):
         """
             Sets up the optimizer.
 
@@ -170,7 +174,7 @@ class LitConvNet(pl.LightningModule):
             Returns:
                 optimizer:              A torch optimizer
         """
-        optimizer = optim.Adam(self.model.parameters(),lr=lr,weight_decay=weight_decay)
+        optimizer = optim.Adam(self.model.parameters(),lr=self.lr,weight_decay=self.weight_decay)
         return optimizer
 
     def predict_step(self,batch,batch_idx,dataloader_idx=0):
