@@ -1,9 +1,10 @@
+from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy as np
 from skimage.morphology import dilation, area_opening, disk
 from scipy.interpolate import griddata
-from sunpy.coordinates import HeliographicStonyhurst
-from sunpy.map import Map
+from sunpy.coordinates.frames import HeliographicStonyhurst
+from sunpy.map import Map, make_fitswcs_header
 
 def latLonRemap(inputmap, refMap=None, dlat=None, dlon=None, method='linear'):
     """Function to reproject a sunpy map into a regular latitude-longitude grid
@@ -295,3 +296,30 @@ def sphericalGrad(colat, lon, data, rsun=(695700*u.km).to(u.Mm)):
     gradMag = np.sqrt(dBdT**2 + dBdP**2)
 
     return dBdT, dBdP, gradMag  
+
+def reprojectToVirtualInstrument(map,
+                                 dim=None,
+                                 radius=1*u.au,
+                                 scale=u.Quantity([0.6,0.6],u.arcsec/u.pixel)):
+    """
+    Reproject map to an instrument at specified radius and plate scale
+    """
+    if dim == None:
+        # keep at the original resolution
+        dim = map.meta['naxis1']
+
+    map_observer = map.reference_coordinate.frame.observer
+    sc = SkyCoord(
+        0*u.arcsec,0*u.arcsec,
+        frame='helioprojective',
+        rsun= map.reference_coordinate.rsun,
+        obstime=map_observer.obstime,
+        observer = HeliographicStonyhurst(map_observer.lon,
+                                          map_observer.lat,
+                                          radius,
+                                          obstime=map_observer.obstime,
+                                          rsun=map_observer.rsun)
+    )
+    out_header = make_fitswcs_header((dim,dim),sc,scale=scale)
+    out_map = map.reproject_to(out_header)   
+    return out_map
