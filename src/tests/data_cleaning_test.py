@@ -39,28 +39,23 @@ class DataCleaningTest(unittest.TestCase):
         self.assertEqual(out_map.data.shape[1],self.dim)
 
     def test_computeFlux(self):
-        tot_usflux = compute_tot_flux(self.map,signed=False)
+        tot_flux,tot_usflux = compute_tot_flux(self.map)
+        self.assertIsInstance(tot_flux,float)
         self.assertIsInstance(tot_usflux,float)
+        print('Total signed flux:',tot_flux)
         print('Total unsigned flux:',tot_usflux)
         self.assertGreater(tot_usflux,np.max(self.map.data[~np.isnan(self.map.data)]))
         self.assertLess(tot_usflux,np.nansum(np.abs(self.map.data))*np.pi*(self.map.meta['rsun_ref']/1e6*2/(0.75*self.map.meta['naxis1']))**2)
 
     def test_computeFluxReproject(self):
         zeroed_map = zeroLimbs(self.map,radius=self.zeroradius)
-        tot_flux = compute_tot_flux(zeroed_map,signed=True)
+        tot_flux,tot_usflux = compute_tot_flux(zeroed_map)
         out_map = reprojectToVirtualInstrument(self.map,dim=self.dim,radius=self.radius,scale=self.scale)
         zeroed_out_map = zeroLimbs(out_map,radius=self.zeroradius)
-        out_tot_flux = compute_tot_flux(zeroed_out_map,signed=True)
+        out_tot_flux,out_tot_usflux = compute_tot_flux(zeroed_out_map)
         print('Total signed flux:',tot_flux)
         print('After reprojection:',out_tot_flux)
         self.assertAlmostEqual(tot_flux,out_tot_flux,delta=0.1*np.abs(tot_flux))
-
-    def test_computeUSFluxReproject(self):
-        zeroed_map = zeroLimbs(self.map,radius=self.zeroradius)
-        tot_usflux = compute_tot_flux(zeroed_map,signed=False)
-        out_map = reprojectToVirtualInstrument(self.map,dim=self.dim,radius=self.radius,scale=self.scale)
-        zeroed_out_map = zeroLimbs(out_map,radius=self.zeroradius)
-        out_tot_usflux = compute_tot_flux(zeroed_out_map,signed=False)
         print('Total unsigned flux:',tot_usflux)
         print('After reprojection:',out_tot_usflux)
         self.assertAlmostEqual(tot_usflux,out_tot_usflux,delta=0.3*np.abs(tot_usflux))
