@@ -339,3 +339,27 @@ def reprojectToVirtualInstrument(map,
     out_header = make_fitswcs_header((dim,dim),sc,scale=scale)
     out_map = map.reproject_to(out_header)   
     return out_map
+
+def zeroLimbs(map,radius=1,fill_value=0):
+    """
+    Fills points outside of specified radius with given value
+
+    Parameters
+    ----------
+    map : sunpy map
+        Map containing observations
+    radius: float
+        Distance from disk center in solar radii
+    fill_value: float
+        Value to set points outside the radius to
+
+    Returns
+    -------
+    map: sunpy map
+        New map with values outside radius set to fill value
+    """
+    x, y = np.meshgrid(*[np.arange(v.value) for v in map.dimensions]) * u.pixel
+    hpc_coords = map.pixel_to_world(x, y)
+    r = np.sqrt(hpc_coords.Tx ** 2 + hpc_coords.Ty ** 2) / map.rsun_obs
+    map.data[r>radius] = fill_value
+    return map
