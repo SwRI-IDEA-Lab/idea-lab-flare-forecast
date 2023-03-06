@@ -13,15 +13,15 @@ from src.data_preprocessing.helper import compute_tot_flux
 class DataCleaningTest(unittest.TestCase):
 
     def setUp(self):
-        root = 'Data/MDI/2010'
-        files = os.listdir('Data/MDI/2010')
+        root = 'Data/MDI/2011'
+        files = os.listdir(root)
         i = 0
         with fits.open(root+os.sep+files[i],cache=False) as fits_file:
             fits_file.verify('fix')
             self.map = sunpy.map.Map(fits_file[1].data,fits_file[1].header)
         self.radius = 1*u.au
-        self.scale = u.Quantity([0.6,0.6],u.arcsec/u.pixel)
-        self.dim = 512
+        self.scale = 4*u.Quantity([0.55,0.55],u.arcsec/u.pixel)
+        self.dim = 1024
 
     def test_reprojectIsMap(self):
         out_map = reprojectToVirtualInstrument(self.map)
@@ -40,9 +40,17 @@ class DataCleaningTest(unittest.TestCase):
     def test_computeFlux(self):
         tot_usflux = compute_tot_flux(self.map)
         self.assertIsInstance(tot_usflux,float)
+        print('Total unsigned flux:',tot_usflux)
         self.assertGreater(tot_usflux,np.max(self.map.data[~np.isnan(self.map.data)]))
-        self.assertLess(tot_usflux,np.nansum(np.abs(self.map.data))*(self.map.meta['rsun_ref']/1e6*2/self.dim)**2)
+        self.assertLess(tot_usflux,np.nansum(np.abs(self.map.data))*np.pi*(self.map.meta['rsun_ref']/1e6*2/(0.75*self.map.meta['naxis1']))**2)
 
+    def test_computeFluxReproject(self):
+        out_map = reprojectToVirtualInstrument(self.map,dim=self.dim,radius=self.radius,scale=self.scale)
+        tot_usflux = compute_tot_flux(out_map)
+        print('Total unsigned flux after reprojection:',tot_usflux)
+        self.assertIsInstance(tot_usflux,float)
+        self.assertGreater(tot_usflux,np.max(out_map.data[~np.isnan(out_map.data)]))
+        self.assertLess(tot_usflux,np.nansum(np.abs(out_map.data))*np.pi*(out_map.meta['rsun_ref']/1e6*2/(0.75*self.dim))**2)
 
 if __name__ == "__main__":
     unittest.main()

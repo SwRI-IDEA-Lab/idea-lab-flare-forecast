@@ -257,7 +257,7 @@ def makeBMask(data,
     fieldMask = np.abs(data)>Blim           
     step1 = area_opening(fieldMask, area_threshold=area_threshold, connectivity=connectivity)
     footprint = disk(dilationR)
-    mask = dilation(step1, footprint).astype(np.float)
+    mask = dilation(step1, footprint).astype(float)
 
     return mask
 
@@ -314,7 +314,7 @@ def reprojectToVirtualInstrument(map,
         Distance to sun of desired virtual observation
     scale: [,] u.arcsec/u.pixel
         Virtual observation pixel scale 
-        
+
     Returns
     -------
     out_map : sunpy map

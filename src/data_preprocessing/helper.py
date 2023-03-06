@@ -88,19 +88,21 @@ def check_quality(data,header):
             return False
     return True
 
-def compute_tot_flux(map):
+def compute_tot_flux(map, Blim=30, area_threshold=64):
     """
     Calculate total unsigned flux for magnetogram by multiplying with pixel area
     and masking only larger regions of flux
 
     Parameters:
         map (sunpy map):    LOS magnetogram
+        Blim (int):         min threshold for masking (Gauss)
+        area_threshold (int): min size of region to mask (pixels)
     
     Returns:
         tot_usflux (float): total unsigned magnetic flux
     """
     area_map = mapPixelArea(map)
     Bdata = map.data*area_map.data
-    Bmask = makeBMask(Bdata,Blim=50,area_threshold=64,connectivity=2,dilationR=8)
+    Bmask = makeBMask(Bdata,Blim=Blim,area_threshold=area_threshold,connectivity=2,dilationR=8)
     tot_usflux = np.nansum(np.abs(Bdata*Bmask))
     return tot_usflux
