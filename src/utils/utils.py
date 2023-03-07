@@ -1,9 +1,10 @@
+from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy as np
 from skimage.morphology import dilation, area_opening, disk
 from scipy.interpolate import griddata
-from sunpy.coordinates import HeliographicStonyhurst
-from sunpy.map import Map
+from sunpy.coordinates.frames import HeliographicStonyhurst
+from sunpy.map import Map, make_fitswcs_header
 
 def latLonRemap(inputmap, refMap=None, dlat=None, dlon=None, method='linear'):
     """Function to reproject a sunpy map into a regular latitude-longitude grid
@@ -256,7 +257,7 @@ def makeBMask(data,
     fieldMask = np.abs(data)>Blim           
     step1 = area_opening(fieldMask, area_threshold=area_threshold, connectivity=connectivity)
     footprint = disk(dilationR)
-    mask = dilation(step1, footprint).astype(np.float)
+    mask = dilation(step1, footprint).astype(float)
 
     return mask
 
@@ -295,3 +296,142 @@ def sphericalGrad(colat, lon, data, rsun=(695700*u.km).to(u.Mm)):
     gradMag = np.sqrt(dBdT**2 + dBdP**2)
 
     return dBdT, dBdP, gradMag  
+
+def reprojectToVirtualInstrument(map,
+                                 dim=None,
+                                 radius=1*u.au,
+                                 scale=4*u.Quantity([0.55,0.55],u.arcsec/u.pixel)):
+    """
+    Reproject map to an instrument at specified radius and plate scale
+    
+    Parameters
+    ----------
+    map : sunpy map
+        Map containing observations
+    dim : int
+        Desired resolution of reprojected map
+    radius: u.au
+        Distance to sun of desired virtual observation
+    scale: [,] u.arcsec/u.pixel
+        Virtual observation pixel scale 
+
+    Returns
+    -------
+    out_map : sunpy map
+        Reprojected map
+    """
+    if dim == None:
+        # keep at the original resolution
+        dim = map.meta['naxis1']
+
+    map_observer = map.reference_coordinate.frame.observer
+    sc = SkyCoord(
+        0*u.arcsec,0*u.arcsec,
+        frame='helioprojective',
+        rsun= map.reference_coordinate.rsun,
+        obstime=map_observer.obstime,
+        observer = HeliographicStonyhurst(map_observer.lon,
+                                          map_observer.lat,
+                                          radius,
+                                          obstime=map_observer.obstime,
+                                          rsun=map_observer.rsun)
+    )
+    out_header = make_fitswcs_header((dim,dim),sc,scale=scale)
+    out_map = map.reproject_to(out_header)   
+    return out_map
+
+
+def scale_rotate(amap, target_scale=0.504273, target_factor=0):
+    """
+    Parameters
+    ----------
+    amap : sunpy map 
+        observation data
+    target_scale : float
+        desired scaling factor
+    target_factor : 0 or 1
+        do not perform scaling if target factor is 0
+
+    Returns
+    -------
+    rotmap : sunpy map
+        scaled, rotated and recentered map
+    """
+
+    scalex = amap.meta['cdelt1']
+    scaley = amap.meta['cdelt2']
+
+    # Set ratios to 1 if no scalin is done
+    if target_factor == 0:
+        ratio_plate = 1
+        ratio_dist = 1
+        new_shape = amap.data.shape[0]
+    else:
+        ratio_plate = target_factor * target_scale / scalex
+        ratio_dist = amap.meta['dsun_obs'] / amap.meta['dsun_ref']
+        # Pad image, if necessary
+        new_shape = int(4096 / target_factor)
+
+    # Reform map to new size if original shape is too small
+
+    if new_shape > amap.data.shape[0]:
+
+        new_fov = np.zeros((new_shape, new_shape)) * np.nan
+        new_meta = amap.meta
+
+        new_meta['crpix1'] = new_meta['crpix1'] - amap.data.shape[0] / 2 + new_fov.shape[0] / 2
+        new_meta['crpix2'] = new_meta['crpix2'] - amap.data.shape[1] / 2 + new_fov.shape[1] / 2
+
+        # Identify the indices for appending the map original FoV
+        i1 = int(new_fov.shape[0] / 2 - amap.data.shape[0] / 2)
+        i2 = int(new_fov.shape[0] / 2 + amap.data.shape[0] / 2)
+
+        # Insert original image in new field of view
+        new_fov[i1:i2, i1:i2] = amap.data[:, :]
+
+        # Assemble Sunpy map
+        amap = Map(new_fov, new_meta)
+
+    # Rotate solar north up rescale
+    rot_map = amap.rotate(scale=ratio_dist / ratio_plate, recenter=True)
+
+    if target_factor != 0:
+        rot_map.meta['cdelt1'] = target_factor * target_scale
+        rot_map.meta['cdelt2'] = target_factor * target_scale
+        rot_map.meta['rsun_obs'] = rot_map.meta['rsun_obs'] * ratio_dist
+        rot_map.meta['dsun_obs'] = rot_map.meta['dsun_ref']
+
+    # # Crop the image to desired shape
+    sz_x_diff = (rot_map.data.shape[0]-new_shape)//2
+    sz_y_diff = (rot_map.data.shape[0]-new_shape)//2
+
+    rot_map.meta['crpix1'] = rot_map.meta['crpix1']-sz_x_diff
+    rot_map.meta['crpix2'] = rot_map.meta['crpix2']-sz_y_diff
+
+    rot_map = Map(rot_map.data[sz_x_diff:sz_x_diff+new_shape, sz_y_diff:sz_y_diff+new_shape].copy(), rot_map.meta)
+
+    return rot_map
+
+def zeroLimbs(map,radius=1,fill_value=0):
+    """
+    Fills points outside of specified radius with given value
+
+    Parameters
+    ----------
+    map : sunpy map
+        Map containing observations
+    radius: float
+        Distance from disk center in solar radii
+    fill_value: float
+        Value to set points outside the radius to
+
+    Returns
+    -------
+    map: sunpy map
+        New map with values outside radius set to fill value
+    """
+    x, y = np.meshgrid(*[np.arange(v.value) for v in map.dimensions]) * u.pixel
+    hpc_coords = map.pixel_to_world(x, y)
+    r = np.sqrt(hpc_coords.Tx ** 2 + hpc_coords.Ty ** 2) / map.rsun_obs
+    map.data[r>radius] = fill_value
+    return map
