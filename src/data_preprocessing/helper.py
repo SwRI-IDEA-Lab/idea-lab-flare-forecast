@@ -17,7 +17,6 @@ def extract_date_time(file,data,year):
 
     Returns:
         date (str):         in %Y%m%d format
-        time (str):         in %H%M%S format
         timestamp(datetime):datetime object 
     """
     if data == 'MDI':        
@@ -64,7 +63,7 @@ def extract_date_time(file,data,year):
         raise ValueError('Invalid data type: ',data,'\n Must be MDI,HMI,SPMG,512 or MWO')
 
 
-    return date,time,timestamp
+    return date,timestamp
 
 def check_quality(data,header):
     """
@@ -109,4 +108,51 @@ def compute_tot_flux(map, Blim=30, area_threshold=64):
     tot_us_flux = np.nansum(np.abs(Bdata*Bmask))
     return tot_flux, tot_us_flux
 
+def fix_header(header,data,timestamp):
+    """
+    Fill in missing header values for historical data
 
+    Parameters:
+        header (dict):  original fits header
+        data (str):     which dataset ('MWO','512','SPMG')
+        timestamp (datetime): sample time obtained from filename
+
+    Returns:
+        header (dict):  repaired fits header
+    """
+    if data == 'MWO':
+        t_obs = timestamp.strftime('%Y.%m.%d_%H:%M:%S')+'_TAI'
+        header['CUNIT1'] = 'arcsec'
+        header['CUNIT2'] = 'arcsec'
+        header['CTYPE1']  = 'HPLN-TAN'                                                            
+        header['CTYPE2']  = 'HPLT-TAN'
+        header['CDELT1'] = header['DXB_IMG']
+        header['CDELT2'] = header['DYB_IMG']
+        header['CRVAL1'] = 0.0
+        header['CRVAL2'] = 0.0
+        header['RSUN_OBS'] = (header['R0'])*header['DXB_IMG']
+        header['CROTA2'] = 0.0
+        header['CRPIX1'] = header['X0']
+        header['CRPIX2'] = header['Y0']
+        header['T_OBS']   = t_obs
+        header['DATE-OBS']   = t_obs
+        header['DATE_OBS']   = t_obs
+        header['RSUN_REF']= 696000000
+        header['crln_obs'] = header['cenlon']
+        
+    elif data == 'SPMG':
+        header['cunit1'] = 'arcsec'
+        header['cunit2'] = 'arcsec'
+        header['CDELT1'] = header['CDELT1A']
+        header['CDELT2'] = header['CDELT2A']
+        header['CRVAL1'] = 0
+        header['CRVAL2'] = 0
+        header['RSUN_OBS'] = header['EPH_R0 ']
+        header['CROTA2'] = 0
+        header['CRPIX1'] = header['CRPIX1A']
+        header['CRPIX2'] = header['CRPIX2A']
+        header['PC2_1'] = 0
+        header['PC1_2'] = 0
+        header['RSUN_REF']= 696000000
+
+    return header

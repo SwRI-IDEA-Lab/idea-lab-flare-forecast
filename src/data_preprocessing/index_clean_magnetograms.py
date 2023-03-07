@@ -8,13 +8,17 @@ import sys,os
 sys.path.append(os.getcwd())
 
 from astropy.io import fits
+import astropy.units as u
 import os
 import csv
 import tarfile
 from datetime import datetime,timedelta
+import h5py
 from pathlib import Path
-from src.data_preprocessing.helper import extract_date_time
+from src.data_preprocessing.helper import *
+from src.utils.utils import reprojectToVirtualInstrument, zeroLimbs
 import argparse
+from sunpy.map import Map
 import sys
 import pandas as pd
 # Remove Warnings
@@ -40,71 +44,98 @@ def parse_args(args=None):
                         help='dataset to index')
     return parser.parse_args(args)
 
-def check_quality(data,header):
+def index_item(file,img,header,metadata_cols,new_dir):
     """
-    Check fits header files for quality keyword and handles MDI or HMI 
-    bad quality values.
+    Obtains index data for a given fits file
 
     Parameters:
-        data (str):     which dataset we are checking
-        header (dict or fits header)
+        file (Path):    full path to data
+        img (array):    data from fits file
+        header (dict):  header from fits file
+        metadata_cols:  list of keys to index from fits header
+        new_dir:        directory to save new cleaned file
     
     Returns:
-        bool:           True if no bad quality flags for MDI or HMI data
-    """
-    if data == 'MDI':
-        # for MDI, check for many missing values
-        if header['MISSVALS'] > 2000:
-            return False
-    elif data == 'HMI':
-        # for HMI, good quality images have quality keyword 0
-        if header['QUALITY'] != 0:
-            return False
-    return True
+        index_data (list):  data to save about file, None if file is bad quality
+    """    
+    file_split = str(file).split('/')
+    data = file_split[-3]
+    year = file_split[-2]
 
-def index_year(root_dir,data,year,out_writer):
+    # extract date and time from filename
+    date,timestamp = extract_date_time(file_split[-1],data,year)
+    if date == None:
+        return None
+
+    # clean (don't add file to index) by checking quality flag
+    if not check_quality(data,header):
+        return None
+
+    # fix historical data headers
+    if data in ['MWO','512','SPMG']:
+        header = fix_header(header,data,timestamp)
+    # create sunpy map, reproject and calculate total unsigned flux on reprojection
+    map = Map(img,header)
+    reproject_map = reprojectToVirtualInstrument(map,dim=1024,radius=1*u.au,scale=4*u.Quantity([0.55,0.55],u.arcsec/u.pixel))
+    
+    # zero out limbs for computing flux statistics
+    out_map = zeroLimbs(reproject_map,radius=0.95,fill_value=0)
+    tot_flux, tot_us_flux = compute_tot_flux(out_map,Blim=30,area_threshold=64)
+
+    # save new hdf5 file
+    if not os.path.exists(new_dir):
+        os.mkdir(new_dir)
+    new_file = new_dir / (data +'_magnetogram.' + datetime.strftime(timestamp,'%Y%m%d_%H%M%S') +'_TAI.h5')
+    with h5py.File(new_file,'w') as h5:
+        h5.create_dataset('magnetogram',data=reproject_map.data)
+
+    # store metadata
+    index_data = [str(new_file),str(file),date,timestamp]
+    index_data.extend([header[key] for key in metadata_cols])
+    index_data.extend([tot_us_flux,tot_flux,np.nanmin(out_map.data),np.nanmax(out_map.data)])
+
+    return index_data
+
+def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir):
     """
-    Indexes fits files within a specified directory by writing filenames, date,
-    time and timestamp information to a csv writer. Nothing will be written to 
-    the index if the file has a bad quality flag.
+    Indexes fits files within a specified directory by writing metadata
+    to a csv writer. Nothing will be written to the index if the file has 
+    a bad quality flag.
 
     Parameters:
         root_dir (Path):    root directory for data
         data (str):         which dataset (MDI,HMI,SPMG,512,MWO...)
         year (str):         subdirectory containing files, sorted by year
         out_writer (csv writer):    where to write index to
+        metadata_cols (list):   list of keys to index from the fits header
+        new_dir (Path):     directory to save cleaned files
     
     Returns:
         n (int):            number of files written to index
     """
     n = 0
     for file in sorted(os.listdir(root_dir/data/year)):
-        # extract date and time from filename
-        date,time,timestamp = extract_date_time(file,data,year)
-        if date == None:
-            continue
-        
-        # store filename, date, time and timestamp 
-        index_data = [root_dir/data/year/file,date,time,timestamp]
-
         # open file
         with fits.open(root_dir/data/year/file,cache=False) as data_fits:
-        # data_fits = fits.open(root_dir/data/year/file,cache=False)
             data_fits.verify('fix')
             if data in ['HMI','MDI']:
+                img = data_fits[1].data
                 header = data_fits[1].header
             elif data in ['SPMG','512','MWO']:
+                img = data_fits[0].data
                 header = data_fits[0].header
 
-        # clean (don't add file to index) by checking quality flag
-        if not check_quality(data,header):
+        # index_file
+        index_data = index_item(root_dir/data/year/file,img,header,metadata_cols,new_dir/year)
+        if index_data == None:
             continue
-
-        data_fits.close()
 
         # write metadata to file
         out_writer.writerow(index_data)
         n += 1
+
+        if n > 5:
+            break
 
     return n
 
@@ -120,21 +151,28 @@ def merge_indices_by_date(root_dir,datasets):
     for data in datasets:
         filename = root_dir/('index_'+data+'.csv')
         df = pd.read_csv(filename)
-        df.rename(columns={'filename':'fname_'+data,'time':'time_'+data,'timestamp':'timestamp_'+data},inplace=True)
+        df.columns = [col+'_'+data for col in df.columns]
+        df.rename(columns = {'date_'+data:'date'},inplace=True)
         df_merged = df_merged.merge(df,how='outer',on='date',sort=True)
     print(len(df_merged),'entries in merged index')
+    print(df_merged.head)
     return df_merged
+
 
 def main():
     datasets = parse_args().data
     root_dir = Path('Data')
+    new_dir = Path('Data/hdf5')
 
     for data in datasets:
         data = data.upper()
         filename = root_dir / ('index_'+data+'.csv')
 
         # header data for csv file
-        header = ['filename','date','time','timestamp']
+        header = ['filename','fits_file','date','timestamp']
+        metadata_cols = ['t_obs','crln_obs','crlt_obs','dsun_obs']
+        header.extend(metadata_cols)
+        header.extend(['tot_us_flux','tot_flux','datamin','datamax'])
 
         # open csv file writer
         out_file = open(filename,'w')
@@ -144,7 +182,7 @@ def main():
         # iterate through files and add to index
         N = 0
         for year in sorted(os.listdir(root_dir / data)):
-            n = index_year(root_dir,data,year,out_writer)
+            n = index_year(root_dir,data,year,out_writer,metadata_cols,new_dir/data)
             print(n,'files for',data,year)
             N += n
 
