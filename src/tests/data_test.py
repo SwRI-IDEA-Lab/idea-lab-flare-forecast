@@ -51,7 +51,7 @@ class DataTest(unittest.TestCase):
         self.assertTrue(item[2] in self.labels)
 
     def test_dataNormalization(self):
-        for idx in range(np.max([len(self.dataset),20])):
+        for idx in range(np.min([len(self.dataset),20])):
             item = self.dataset[idx]
             data = item[1]
             self.assertLessEqual(torch.max(torch.abs(data)),1)

@@ -5,6 +5,29 @@ Helper functions for data pre-processing
 from datetime import datetime,timedelta
 import numpy as np
 from src.utils.utils import mapPixelArea, makeBMask
+import pandas as pd
+
+def read_catalog(filename,**kwargs):
+    """
+    Reads a csv file into a pandas dataframe and converts any columns
+    to datetime that can be successfully converted
+
+    Parameters:
+        filename (str):     location of csv file
+        kwargs:             optional keyword arguments to pass to pd.read_csv
+    
+    Returns:
+        df:                 converted pandas dataframe
+
+    """
+    df = pd.read_csv(filename,**kwargs)
+    for col in df.columns[df.dtypes=='object']:
+        try:
+            df[col] = pd.to_datetime(df[col])
+        except (pd.errors.ParserError,ValueError):
+            # if unable to convert to datetime, then leave unconverted
+            pass
+    return df
 
 def extract_date_time(file,data,year):
     """
