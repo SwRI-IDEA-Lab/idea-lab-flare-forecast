@@ -108,6 +108,32 @@ def compute_tot_flux(map, Blim=30, area_threshold=64):
     tot_us_flux = np.nansum(np.abs(Bdata*Bmask))
     return tot_flux, tot_us_flux
 
+def extract_fits(data_fits,dataset):
+    """
+    Extract image and header from fits data according to magnetogram dataset
+
+    Parameters:
+        data_fits:  opened fits file
+        dataset (str):  which type of magnetogram (HMI,MDI,SPMG,512,MWO)
+    
+    Returns:
+        img:        observations from fits file
+        header:     header dictionary from fits file
+    """
+    if dataset in ['HMI','MDI']:
+        img = data_fits[1].data
+        header = data_fits[1].header
+    elif dataset in ['MWO']:
+        img = data_fits[0].data
+        header = data_fits[0].header
+    elif dataset in ['SPMG']:
+        img = data_fits[0].data[5,:,:]
+        header = data_fits[0].header
+    elif dataset in ['512']:
+        img = data_fits[0].data[2,:,:]
+        header = data_fits[0].header  
+    return img,header   
+
 def fix_header(header,data,timestamp):
     """
     Fill in missing header values for historical data
@@ -139,20 +165,12 @@ def fix_header(header,data,timestamp):
         header['DATE_OBS']   = t_obs
         header['RSUN_REF']= 696000000
         header['crln_obs'] = header['cenlon']
-        
-    elif data == 'SPMG':
+
+    elif data == 'SPMG' or data == '512':
         header['cunit1'] = 'arcsec'
         header['cunit2'] = 'arcsec'
-        header['CDELT1'] = header['CDELT1A']
-        header['CDELT2'] = header['CDELT2A']
-        header['CRVAL1'] = 0
-        header['CRVAL2'] = 0
         header['RSUN_OBS'] = header['EPH_R0 ']
-        header['CROTA2'] = 0
-        header['CRPIX1'] = header['CRPIX1A']
-        header['CRPIX2'] = header['CRPIX2A']
         header['PC2_1'] = 0
         header['PC1_2'] = 0
-        header['RSUN_REF']= 696000000
 
     return header

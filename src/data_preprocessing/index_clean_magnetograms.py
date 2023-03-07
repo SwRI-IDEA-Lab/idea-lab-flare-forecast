@@ -129,12 +129,7 @@ def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir,test=False):
         # open file
         with fits.open(root_dir/data/year/file,cache=False) as data_fits:
             data_fits.verify('fix')
-            if data in ['HMI','MDI']:
-                img = data_fits[1].data
-                header = data_fits[1].header
-            elif data in ['SPMG','512','MWO']:
-                img = data_fits[0].data
-                header = data_fits[0].header
+            img,header = extract_fits(data_fits,data)           
 
         # index_file
         index_data = index_item(root_dir/data/year/file,img,header,metadata_cols,new_dir/year)
