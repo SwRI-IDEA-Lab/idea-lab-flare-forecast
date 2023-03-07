@@ -134,6 +134,7 @@ dmypy.json
 *.csv
 *.fits
 
-# lightning logs
+# log files
 src/lightning_logs/*
-
+lightning_logs/*
+wandb/*

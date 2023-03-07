@@ -2,6 +2,7 @@ from torch import nn, optim
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
+import torchmetrics
 
 class convnet_sc(nn.Module):
     """ 
@@ -18,36 +19,36 @@ class convnet_sc(nn.Module):
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block2 = nn.Sequential(
             nn.Conv2d(32, 32, (3,3),padding='valid'),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block3 = nn.Sequential(
             nn.Conv2d(32, 64, (3,3),padding='same'),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block4 = nn.Sequential(
             nn.ZeroPad2d((2,2)),
             nn.Conv2d(64, 128, (3,3),padding='valid'),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block5 = nn.Sequential(
             nn.Conv2d(128, 256, (3,3),padding='valid'),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
         )
 
         self.fcl = nn.Sequential(
             nn.LazyLinear(100),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
             nn.Sigmoid()
@@ -96,12 +97,23 @@ class LitConvNet(pl.LightningModule):
 
         Parameters:
             model (torch.nn.Module):    a PyTorch model that ingests magnetograms and outputs a binary classification
-            
+            lr (float):                 learning rate
+            wd (float):                 L2 regularization parameter
     """
-    def __init__(self,model):
+    def __init__(self,model,lr=1e-4,wd=1e-2):
         super().__init__()
         self.model = model
-        self.loss = nn.BCELoss()    # define loss function
+        self.lr = lr
+        self.weight_decay = wd
+        # define loss function
+        self.loss = nn.BCELoss()    
+        # define metrics
+        self.train_acc = torchmetrics.Accuracy(task='binary')
+        self.val_acc = torchmetrics.Accuracy(task='binary')
+        self.val_aps = torchmetrics.AveragePrecision(task='binary')
+        self.val_f1 = torchmetrics.F1Score(task='binary')
+        self.val_bss = torchmetrics.MeanSquaredError()
+        self.save_hyperparameters(ignore=['model'])
 
     def training_step(self,batch,batch_idx):
         """
@@ -118,13 +130,42 @@ class LitConvNet(pl.LightningModule):
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
         y_hat = self.model(x)
-        loss = self.loss(y_hat,y)
+        loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        self.train_acc(y_hat,y)
         self.log('loss',loss)
+        self.log('train_acc',self.train_acc,on_step=True,on_epoch=False)
         return loss
-
-    def configure_optimizers(self,lr=1e-4,weight_decay=1e-2):
+    
+    def validation_step(self,batch,batch_idx):
         """
-            Sets up the optimizer. Here we use Adagrad.
+            Runs the model on the validation set and logs validation loss 
+            and other metrics.
+
+            Parameters:
+                batch:                  batch from a DataLoader
+                batch_idx:              index of batch                  
+        """
+        fname, x, y = batch
+        y = y.view(y.shape[0],-1)
+        # forward pass
+        y_hat = self.model(x)
+        val_loss = self.loss(y_hat,y.type(torch.FloatTensor))
+
+        # calculate metrics
+        self.val_acc(y_hat,y)
+        self.val_aps(y_hat,y)
+        self.val_f1(y_hat,y)
+        self.val_bss(y_hat,y)
+
+        self.log('val_loss',val_loss)
+        self.log('val_acc',self.val_acc)
+        self.log('val_aps',self.val_aps)
+        self.log('val_f1',self.val_f1)
+        self.log('val_bss',self.val_bss)
+
+    def configure_optimizers(self):
+        """
+            Sets up the optimizer.
 
             Parameters:
                 lr (float):             learning rate
@@ -133,7 +174,7 @@ class LitConvNet(pl.LightningModule):
             Returns:
                 optimizer:              A torch optimizer
         """
-        optimizer = optim.Adam(self.model.parameters(),lr=lr,weight_decay=weight_decay)
+        optimizer = optim.Adam(self.model.parameters(),lr=self.lr,weight_decay=self.weight_decay)
         return optimizer
 
     def predict_step(self,batch,batch_idx,dataloader_idx=0):

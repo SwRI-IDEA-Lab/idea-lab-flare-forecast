@@ -60,6 +60,7 @@ class DataTest(unittest.TestCase):
             plt.colorbar()
             plt.title(item[0].split('/')[-1]+' flare label: '+str(item[2]))
             plt.savefig('src/tests/test_img_'+str(idx)+'.png')
+            plt.close()
 
     def test_datamoduleLoadData(self):
         self.datamodule.prepare_data()
@@ -81,3 +82,5 @@ class DataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
