@@ -42,6 +42,16 @@ def parse_args(args=None):
                         nargs='*',
                         default=['mdi'],
                         help='dataset to index')
+    parser.add_argument('-r','--root',
+                        type=str,
+                        default='Data',
+                        help='root directory for fits files'
+                        )
+    parser.add_argument('-n','--newdir',
+                    type=str,
+                    default='Data/hdf5',
+                    help='directory to save cleaned hdf5 files'
+                    )
     return parser.parse_args(args)
 
 def index_item(file,img,header,metadata_cols,new_dir):
@@ -96,7 +106,7 @@ def index_item(file,img,header,metadata_cols,new_dir):
 
     return index_data
 
-def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir):
+def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir,test=False):
     """
     Indexes fits files within a specified directory by writing metadata
     to a csv writer. Nothing will be written to the index if the file has 
@@ -109,6 +119,7 @@ def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir):
         out_writer (csv writer):    where to write index to
         metadata_cols (list):   list of keys to index from the fits header
         new_dir (Path):     directory to save cleaned files
+        test (bool):        option to stop indexing after 5 files
     
     Returns:
         n (int):            number of files written to index
@@ -134,6 +145,10 @@ def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir):
         out_writer.writerow(index_data)
         n += 1
 
+        # cut off indexing after 5 files if testing
+        if test and n>=5:
+            break
+
     return n
 
 def merge_indices_by_date(root_dir,datasets):
@@ -157,9 +172,10 @@ def merge_indices_by_date(root_dir,datasets):
 
 
 def main():
-    datasets = parse_args().data
-    root_dir = Path('Data')
-    new_dir = Path('Data/hdf5')
+    parser = parse_args()
+    datasets = parser.data
+    root_dir = Path(parser.root)
+    new_dir = Path(parser.newdir)
 
     for data in datasets:
         data = data.upper()
