@@ -66,19 +66,19 @@ class IndexingTest(unittest.TestCase):
         self.assertEqual(len(index_data),8+len(self.cols))
         print(index_data)
 
-    # def test_mergeIndices(self):
-    #     n = index_year(self.root_dir,self.data,self.year,self.csv_writer,self.cols,self.new_dir,test=True)
-    #     self.csv_file.close()
-    #     df_MDI = pd.read_csv(self.filename)
-    #     self.assertEqual(n,len(df_MDI))
-    #     df_merged = merge_indices_by_date(Path('src/tests'),self.multiple_data)
-    #     self.assertIsInstance(df_merged,pd.DataFrame)
-    #     self.assertTrue('date' in df_merged.columns)
-    #     for data in self.multiple_data:
-    #         cols = ['filename_'+data,'timestamp_'+data]
-    #         self.assertTrue(all(col in df_merged.columns for col in cols))
-    #     self.assertGreaterEqual(len(df_merged),len(self.df_HMI))
-    #     self.assertGreaterEqual(len(df_merged),len(df_MDI))
+    def test_mergeIndices(self):
+        n = index_year(self.root_dir,self.data,self.year,self.csv_writer,self.cols,self.new_dir,test=True)
+        self.csv_file.close()
+        df_MDI = pd.read_csv(self.filename)
+        self.assertEqual(n,len(df_MDI))
+        df_merged = merge_indices_by_date(Path('src/tests'),self.multiple_data)
+        self.assertIsInstance(df_merged,pd.DataFrame)
+        self.assertTrue('date' in df_merged.columns)
+        for data in self.multiple_data:
+            cols = ['filename_'+data,'timestamp_'+data]
+            self.assertTrue(all(col in df_merged.columns for col in cols))
+        self.assertGreaterEqual(len(df_merged),len(self.df_HMI))
+        self.assertGreaterEqual(len(df_merged),len(df_MDI))
 
     def tearDown(self):
         self.csv_file.close()
