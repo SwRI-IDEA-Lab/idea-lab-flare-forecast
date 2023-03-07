@@ -4,6 +4,7 @@ sys.path.append(os.getcwd())
 from astropy.io import fits
 import unittest
 from src.data_preprocessing.index_clean_magnetograms import *
+from src.data_preprocessing.helper import *
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -13,14 +14,14 @@ class IndexingTest(unittest.TestCase):
     def setUp(self):
         self.single_data = ['mdi']
         self.default_data = None
-        self.multiple_data = ['MDI','HMI']
+        self.multiple_data = ['SPMG','HMI']
         self.invalid_data = ['blah']
         self.root_dir = Path('Data')
-        self.data = 'MDI'
-        self.year = '2011'
+        self.data = 'SPMG'
+        self.year = '1992'
         self.fitsfile = os.listdir(self.root_dir/self.data/self.year)[0]
         self.new_dir = Path('Data/hdf5')/self.data
-        self.filename='src/tests/index_MDI.csv'
+        self.filename='src/tests/index_SPMG.csv'
         self.csv_file = open(self.filename,'w')
         self.csv_writer = csv.writer(self.csv_file,delimiter=',')
         self.csv_writer.writerow(['filename','fits_file','date','timestamp','t_obs','tot_us_flux','tot_flux','datamin','datamax'])
@@ -55,12 +56,7 @@ class IndexingTest(unittest.TestCase):
         file = self.root_dir/self.data/self.year/self.fitsfile
         with fits.open(file,cache=False) as data_fits:
             data_fits.verify('fix')
-            if self.data in ['HMI','MDI']:
-                img = data_fits[1].data
-                header = data_fits[1].header 
-            elif self.data in ['SPMG','512','MWO']:
-                img = data_fits[0].data
-                header = data_fits[0].header
+            img,header = extract_fits(data_fits,self.data)
         index_data = index_item(file,img,header,self.cols,self.new_dir/self.year)    
         self.assertIsInstance(index_data,list)
         self.assertEqual(len(index_data),8+len(self.cols))

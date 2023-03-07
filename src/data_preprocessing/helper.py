@@ -172,5 +172,6 @@ def fix_header(header,data,timestamp):
         header['RSUN_OBS'] = header['EPH_R0 ']
         header['PC2_1'] = 0
         header['PC1_2'] = 0
+        header['t_obs'] = header['date_obs']
 
     return header
