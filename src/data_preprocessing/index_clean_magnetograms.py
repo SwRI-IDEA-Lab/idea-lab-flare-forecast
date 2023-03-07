@@ -16,11 +16,12 @@ from datetime import datetime,timedelta
 import h5py
 from pathlib import Path
 from src.data_preprocessing.helper import *
-from src.utils.utils import reprojectToVirtualInstrument, zeroLimbs
+from src.utils.utils import reprojectToVirtualInstrument, scale_rotate, zeroLimbs
 import argparse
 from sunpy.map import Map
 import sys
 import pandas as pd
+import time
 # Remove Warnings
 import warnings
 warnings.filterwarnings('ignore')
@@ -86,7 +87,8 @@ def index_item(file,img,header,metadata_cols,new_dir):
         header = fix_header(header,data,timestamp)
     # create sunpy map, reproject and calculate total unsigned flux on reprojection
     map = Map(img,header)
-    reproject_map = reprojectToVirtualInstrument(map,dim=1024,radius=1*u.au,scale=4*u.Quantity([0.55,0.55],u.arcsec/u.pixel))
+    rot_map = scale_rotate(map)
+    reproject_map = reprojectToVirtualInstrument(rot_map,dim=1024,radius=1*u.au,scale=4*u.Quantity([0.55,0.55],u.arcsec/u.pixel))
     
     # zero out limbs for computing flux statistics
     out_map = zeroLimbs(reproject_map,radius=0.95,fill_value=0)
@@ -192,8 +194,10 @@ def main():
         for year in sorted(os.listdir(root_dir / data)):
             if not os.path.isdir(root_dir/data/year):
                 continue
+            t0 = time.time()
             n = index_year(root_dir,data,year,out_writer,metadata_cols,new_dir/data)
-            print(n,'files for',data,year)
+            t1 = time.time()
+            print(n,'files for',data,year,'in',(t1-t0)/60,'minutes')
             N += n
 
         out_file.close()

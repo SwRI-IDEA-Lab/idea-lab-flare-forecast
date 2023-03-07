@@ -340,6 +340,78 @@ def reprojectToVirtualInstrument(map,
     out_map = map.reproject_to(out_header)   
     return out_map
 
+
+def scale_rotate(amap, target_scale=0.504273, target_factor=0):
+    """
+    Parameters
+    ----------
+    amap : sunpy map 
+        observation data
+    target_scale : float
+        desired scaling factor
+    target_factor : 0 or 1
+        do not perform scaling if target factor is 0
+
+    Returns
+    -------
+    rotmap : sunpy map
+        scaled, rotated and recentered map
+    """
+
+    scalex = amap.meta['cdelt1']
+    scaley = amap.meta['cdelt2']
+
+    # Set ratios to 1 if no scalin is done
+    if target_factor == 0:
+        ratio_plate = 1
+        ratio_dist = 1
+        new_shape = amap.data.shape[0]
+    else:
+        ratio_plate = target_factor * target_scale / scalex
+        ratio_dist = amap.meta['dsun_obs'] / amap.meta['dsun_ref']
+        # Pad image, if necessary
+        new_shape = int(4096 / target_factor)
+
+    # Reform map to new size if original shape is too small
+
+    if new_shape > amap.data.shape[0]:
+
+        new_fov = np.zeros((new_shape, new_shape)) * np.nan
+        new_meta = amap.meta
+
+        new_meta['crpix1'] = new_meta['crpix1'] - amap.data.shape[0] / 2 + new_fov.shape[0] / 2
+        new_meta['crpix2'] = new_meta['crpix2'] - amap.data.shape[1] / 2 + new_fov.shape[1] / 2
+
+        # Identify the indices for appending the map original FoV
+        i1 = int(new_fov.shape[0] / 2 - amap.data.shape[0] / 2)
+        i2 = int(new_fov.shape[0] / 2 + amap.data.shape[0] / 2)
+
+        # Insert original image in new field of view
+        new_fov[i1:i2, i1:i2] = amap.data[:, :]
+
+        # Assemble Sunpy map
+        amap = Map(new_fov, new_meta)
+
+    # Rotate solar north up rescale
+    rot_map = amap.rotate(scale=ratio_dist / ratio_plate, recenter=True)
+
+    if target_factor != 0:
+        rot_map.meta['cdelt1'] = target_factor * target_scale
+        rot_map.meta['cdelt2'] = target_factor * target_scale
+        rot_map.meta['rsun_obs'] = rot_map.meta['rsun_obs'] * ratio_dist
+        rot_map.meta['dsun_obs'] = rot_map.meta['dsun_ref']
+
+    # # Crop the image to desired shape
+    sz_x_diff = (rot_map.data.shape[0]-new_shape)//2
+    sz_y_diff = (rot_map.data.shape[0]-new_shape)//2
+
+    rot_map.meta['crpix1'] = rot_map.meta['crpix1']-sz_x_diff
+    rot_map.meta['crpix2'] = rot_map.meta['crpix2']-sz_y_diff
+
+    rot_map = Map(rot_map.data[sz_x_diff:sz_x_diff+new_shape, sz_y_diff:sz_y_diff+new_shape].copy(), rot_map.meta)
+
+    return rot_map
+
 def zeroLimbs(map,radius=1,fill_value=0):
     """
     Fills points outside of specified radius with given value
