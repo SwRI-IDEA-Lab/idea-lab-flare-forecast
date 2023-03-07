@@ -300,7 +300,7 @@ def sphericalGrad(colat, lon, data, rsun=(695700*u.km).to(u.Mm)):
 def reprojectToVirtualInstrument(map,
                                  dim=None,
                                  radius=1*u.au,
-                                 scale=u.Quantity([0.6,0.6],u.arcsec/u.pixel)):
+                                 scale=4*u.Quantity([0.55,0.55],u.arcsec/u.pixel)):
     """
     Reproject map to an instrument at specified radius and plate scale
     

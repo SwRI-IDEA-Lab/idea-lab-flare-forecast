@@ -87,7 +87,7 @@ def index_item(file,img,header,metadata_cols,new_dir):
         os.mkdir(new_dir)
     new_file = new_dir / (data +'_magnetogram.' + datetime.strftime(timestamp,'%Y%m%d_%H%M%S') +'_TAI.h5')
     with h5py.File(new_file,'w') as h5:
-        h5.create_dataset('magnetogram',data=reproject_map.data)
+        h5.create_dataset('magnetogram',data=reproject_map.data,compression='gzip')
 
     # store metadata
     index_data = [str(new_file),str(file),date,timestamp]
@@ -134,9 +134,6 @@ def index_year(root_dir,data,year,out_writer,metadata_cols,new_dir):
         out_writer.writerow(index_data)
         n += 1
 
-        if n > 5:
-            break
-
     return n
 
 def merge_indices_by_date(root_dir,datasets):
@@ -149,7 +146,7 @@ def merge_indices_by_date(root_dir,datasets):
     """
     df_merged = pd.DataFrame({'date':[]})
     for data in datasets:
-        filename = root_dir/('index_'+data+'.csv')
+        filename = root_dir/('index_'+data.upper()+'.csv')
         df = pd.read_csv(filename)
         df.columns = [col+'_'+data for col in df.columns]
         df.rename(columns = {'date_'+data:'date'},inplace=True)
@@ -166,7 +163,7 @@ def main():
 
     for data in datasets:
         data = data.upper()
-        filename = root_dir / ('index_'+data+'.csv')
+        filename = 'Data/index_'+data+'.csv'
 
         # header data for csv file
         header = ['filename','fits_file','date','timestamp']
@@ -182,6 +179,8 @@ def main():
         # iterate through files and add to index
         N = 0
         for year in sorted(os.listdir(root_dir / data)):
+            if not os.path.isdir(root_dir/data/year):
+                continue
             n = index_year(root_dir,data,year,out_writer,metadata_cols,new_dir/data)
             print(n,'files for',data,year)
             N += n
@@ -189,8 +188,8 @@ def main():
         out_file.close()
         print(N,'files for',data)
     
-    if len(datasets)>0:
-        df_merged = merge_indices_by_date(root_dir,datasets)
+    if len(datasets)>1:
+        df_merged = merge_indices_by_date(Path('Data'),datasets)
         filename_merged = '_'.join([data for data in datasets])
         df_merged.to_csv(root_dir/('index_'+filename_merged),index=False)
 
