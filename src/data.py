@@ -85,7 +85,10 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.df = pd.read_csv(self.data_file)
         self.df['sample_time'] = pd.to_datetime(self.df['sample_time'])
         # define label
-        self.df['flare'] = self.df['flare_in_'+str(self.forecast_window)+'h']
+        # tot us flux threshold for pretraining
+        thresh = 4e7
+        self.df['flare'] = (self.df['tot_us_flux_MDI'] >= thresh).astype(int)
+        # self.df['flare'] = self.df['flare_in_'+str(self.forecast_window)+'h']
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets

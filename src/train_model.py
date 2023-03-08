@@ -14,7 +14,7 @@ from pytorch_lightning.loggers import WandbLogger
 
 def main():
     # set dataset file and parameters
-    datafile = 'Data/labels_mdi_small100.csv'
+    datafile = 'Data/labels_MDI.csv'
     window = 24     # forecast window (hours)
     dim = 128
     lr = 1e-3
@@ -43,7 +43,13 @@ def main():
                                            'batch':batch})
 
     # train model
-    trainer = pl.Trainer(deterministic=True,max_epochs=100,callbacks=[ModelSummary(max_depth=2)],logger=wandb_logger)
+    trainer = pl.Trainer(deterministic=True,
+                         max_epochs=50,
+                         log_every_n_steps=4,
+                         callbacks=[ModelSummary(max_depth=2)],
+                         limit_train_batches=12,
+                         limit_val_batches=5,
+                         logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
 
     # evaluate model
