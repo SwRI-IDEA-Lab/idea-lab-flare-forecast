@@ -104,7 +104,10 @@ class MagnetogramDataModule(pl.LightningDataModule):
             data_full = MagnetogramDataSet(df_full,self.transform)
             self.train_set, self.val_set = torch.utils.data.random_split(data_full,[0.7,0.3])
         self.test_set = MagnetogramDataSet(df_test,self.transform)
-        print('Train:',len(self.train_set),'Valid:',len(self.val_set),'Test:',len(self.test_set))
+        print('Train:',len(self.train_set),
+              'Valid:',len(self.val_set),
+              'Test:',len(self.test_set))
+        print('Flare/no-flare ratio in training+val:',sum(df_full['flare']==1),sum(df_full['flare']==0))
 
     def train_dataloader(self):
         return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4)

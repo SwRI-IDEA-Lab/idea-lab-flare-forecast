@@ -113,6 +113,7 @@ class LitConvNet(pl.LightningModule):
         self.val_aps = torchmetrics.AveragePrecision(task='binary')
         self.val_f1 = torchmetrics.F1Score(task='binary')
         self.val_bss = torchmetrics.MeanSquaredError()
+        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
         self.save_hyperparameters(ignore=['model'])
 
     def training_step(self,batch,batch_idx):
@@ -156,12 +157,24 @@ class LitConvNet(pl.LightningModule):
         self.val_aps(y_hat,y)
         self.val_f1(y_hat,y)
         self.val_bss(y_hat,y)
+        self.val_confusion_matrix.update(y_hat,y)
 
         self.log('val_loss',val_loss)
         self.log('val_acc',self.val_acc)
         self.log('val_aps',self.val_aps)
         self.log('val_f1',self.val_f1)
         self.log('val_bss',self.val_bss)
+
+    def validation_epoch_end(self,outputs):
+        confusion_matrix = self.val_confusion_matrix.compute()
+        tp = confusion_matrix[1,1].type(torch.FloatTensor)
+        tn = confusion_matrix[0,0].type(torch.FloatTensor)
+        fp = confusion_matrix[0,1].type(torch.FloatTensor)
+        fn = confusion_matrix[1,0].type(torch.FloatTensor)
+        tss = (tp) / (tp + fn) - (fp) / (fp + tn)
+        hss = 2*(tp*tn-fp*fn)/((tp+fp)*(fp+tn)+(tp+fn)*(fn+tn))
+        self.log_dict({'val_TP':tp,'val_TN':tn,'val_FP':fp,'val_FN':fn,'val_tss':tss,'val_hss':hss})
+        self.val_confusion_matrix.reset()
 
     def configure_optimizers(self):
         """
