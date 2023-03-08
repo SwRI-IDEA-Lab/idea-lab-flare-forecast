@@ -24,7 +24,7 @@ class LabelingTest(unittest.TestCase):
                                     'time_MDI':[000000],
                                     'timestamp_MDI':[datetime(1999,2,1,0)]})
             df.to_csv(self.index_file,index=False)
-        self.header = ['filename','sample_time','dataset','C_flare_in_12h','M_flare_in_12h','X_flare_in_12h','flare_intensity_in_12h']
+        self.header = ['filename','sample_time','dataset','tot_flux','C_flare_in_12h','M_flare_in_12h','X_flare_in_12h','flare_intensity_in_12h']
 
     def test_parser(self):
         parser = parse_args([self.index_file,self.out_file,'-w 12'])
@@ -45,7 +45,7 @@ class LabelingTest(unittest.TestCase):
     def test_writeHeader(self):
         out_file = open(self.out_file,'w')
         out_writer = csv.writer(out_file,delimiter=',')
-        write_header([12],out_writer)
+        write_header([12],out_writer,['tot_flux'])
         out_file.close()
         df = pd.read_csv(self.out_file)
         self.assertTrue(all(x==y for x,y in zip(df.columns,self.header)))
@@ -55,6 +55,7 @@ class LabelingTest(unittest.TestCase):
         sample = samples.iloc[0]
         flares = read_catalog(self.flare_filename)
         file_data = generate_file_data(sample,flares,[12])
+        print(file_data)
         self.assertIsInstance(file_data,list)
 
 if __name__ == "__main__":
