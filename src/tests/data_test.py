@@ -51,7 +51,7 @@ class DataTest(unittest.TestCase):
         self.assertTrue(item[2] in self.labels)
 
     def test_dataNormalization(self):
-        for idx in range(np.max([len(self.dataset),20])):
+        for idx in range(np.min([len(self.dataset),20])):
             item = self.dataset[idx]
             data = item[1]
             self.assertLessEqual(torch.max(torch.abs(data)),1)
@@ -60,6 +60,7 @@ class DataTest(unittest.TestCase):
             plt.colorbar()
             plt.title(item[0].split('/')[-1]+' flare label: '+str(item[2]))
             plt.savefig('src/tests/test_img_'+str(idx)+'.png')
+            plt.close()
 
     def test_datamoduleLoadData(self):
         self.datamodule.prepare_data()
@@ -81,3 +82,5 @@ class DataTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+

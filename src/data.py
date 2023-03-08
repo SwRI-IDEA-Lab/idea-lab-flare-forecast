@@ -38,14 +38,14 @@ class MagnetogramDataSet(Dataset):
         filename = self.name_frame.iloc[idx]
         img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
         img = np.nan_to_num(img)
-        label = self.label_frame.iloc[idx].astype(np.float32)
+        label = self.label_frame.iloc[idx]
 
         # Normalize magnetogram data
         # 1.3 calibration factor for MDI data
         if self.dataset_frame.iloc[idx] == 'mdi':
             img = img/1.3
         # clip magnetogram data within max value
-        maxval = 1500  # Gauss
+        maxval = 1000  # Gauss
         img[np.where(img>maxval)] = maxval
         img[np.where(img<-maxval)] = -maxval
         # scale between -1 and 1
@@ -65,17 +65,19 @@ class MagnetogramDataModule(pl.LightningDataModule):
         Parameters:
             data_file (str):        file containing magnetogram filenames and labels
             forecast_window (int):  number of hours for forecast
+            dim (int):              dimension for scaling data
+            batch (int):            batch size for all dataloaders
     """
-    def __init__(self, data_file: str, forecast_window: int = 24):
+    def __init__(self, data_file: str, forecast_window: int = 24, dim: int = 256, batch: int = 32):
         super().__init__()
         self.data_file = data_file
         self.forecast_window = forecast_window
         self.split_type = 'random'
-        self.batch_size = 32
+        self.batch_size = batch
         # define data transforms
         self.transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Resize(256,transforms.InterpolationMode.BILINEAR,antialias=True),
+            transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
         ])
 
     def prepare_data(self):
@@ -89,7 +91,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         # performs data splitting and initializes datasets
 
         # hold out test set
-        inds_test = self.df['sample_time']>datetime(2016,1,1)
+        inds_test = self.df['sample_time']>datetime(2016,1,1) 
         df_test = self.df.loc[inds_test,:]
         df_full = self.df.loc[~inds_test,:]
         print('Bounds of test set:',df_test['sample_time'].min(),df_test['sample_time'].max())
@@ -102,16 +104,16 @@ class MagnetogramDataModule(pl.LightningDataModule):
         print('Train:',len(self.train_set),'Valid:',len(self.val_set),'Test:',len(self.test_set))
 
     def train_dataloader(self):
-        return DataLoader(self.train_set,batch_size=self.batch_size)
+        return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4)
 
     def val_dataloader(self):
-        return DataLoader(self.val_set,batch_size=self.batch_size)
+        return DataLoader(self.val_set,batch_size=self.batch_size,num_workers=4)
 
     def test_dataloader(self):
-        return DataLoader(self.test_set,batch_size=self.batch_size)
+        return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
 
     def predict_dataloader(self):
-        return DataLoader(self.test_set,batch_size=self.batch_size)
+        return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
 
 
 
