@@ -17,19 +17,20 @@ import matplotlib.pyplot as plt
 class DataTest(unittest.TestCase):
 
     def setUp(self):
-        self.datafile = 'Data/labels_mdi_small.csv'
+        self.datafile = 'Data/labels_MDI.csv'
         self.df = pd.read_csv(self.datafile)
-        self.df['flare'] = self.df['flare_in_24h']
+        self.label = 'flare'
+        self.df['flare'] = (self.df['flare_intensity_in_24h']>=1e-5).astype(int)
         self.labels = [0,1]
         self.dim = 256
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize(self.dim,transforms.InterpolationMode.BILINEAR,antialias=True),
         ])
-        self.dataset = MagnetogramDataSet(self.df,self.transform)
+        self.dataset = MagnetogramDataSet(self.df,self.label,self.transform)
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.trainsplit = 0.7
-        self.datamodule = MagnetogramDataModule(self.datafile)
+        self.datamodule = MagnetogramDataModule(self.datafile,self.label)
 
     def test_datasetExists(self):
         self.assertGreaterEqual(len(self.dataset),0)
