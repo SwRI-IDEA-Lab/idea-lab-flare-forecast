@@ -160,8 +160,6 @@ def merge_indices_by_date(root_dir,datasets):
     for data in datasets:
         filename = root_dir/('index_'+data.upper()+'.csv')
         df = pd.read_csv(filename)
-        df.columns = [col+'_'+data for col in df.columns]
-        df.rename(columns = {'date_'+data:'date'},inplace=True)
         df_merged = df_merged.merge(df,how='outer',on='date',sort=True)
     print(len(df_merged),'entries in merged index')
     print(df_merged.head)
@@ -179,10 +177,10 @@ def main():
         filename = 'Data/index_'+data+'.csv'
 
         # header data for csv file
-        header = ['filename','fits_file','date','timestamp']
-        metadata_cols = ['t_obs','crln_obs','crlt_obs','dsun_obs']
-        header.extend(metadata_cols)
+        header = ['filename','fits_file','timestamp','t_obs','crln_obs','crlt_obs','dsun_obs']
         header.extend(['tot_us_flux','tot_flux','datamin','datamax'])
+        header = [key+'_'+data for key in header]
+        header.insert(2,'date')
 
         # open csv file writer
         out_file = open(filename,'w')
