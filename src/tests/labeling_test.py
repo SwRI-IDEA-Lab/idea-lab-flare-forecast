@@ -15,7 +15,7 @@ class LabelingTest(unittest.TestCase):
         self.flare_filename = 'Data/hek_flare_catalog.csv'
         self.flare_catalog = pd.read_csv(self.flare_filename)
         self.index_file = 'Data/index_MDI.csv'
-        self.out_file = 'Data/labels_MDI.csv'
+        self.out_file = 'src/tests/labels_MDI.csv'
         self.mdi_dir = 'Data/MDI/1999'
         self.mdi_file = self.mdi_dir+os.listdir(self.mdi_dir)[0]
         if not os.path.exists(self.index_file):

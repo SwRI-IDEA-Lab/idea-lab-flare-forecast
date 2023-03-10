@@ -36,7 +36,7 @@ def parse_args(args=None):
 
     return parser.parse_args(args)
 
-def  write_header(flare_windows,out_writer,cols=[]):
+def write_header(flare_windows,out_writer,cols=[]):
     """
     Writes header columns to labels file
 
@@ -47,6 +47,8 @@ def  write_header(flare_windows,out_writer,cols=[]):
     """
     # header columns
     header_row = ['filename','sample_time','dataset']
+    cols = [col.rstrip('_MDIHWOSPG512') for col in cols if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
+    cols = list(set(cols))  # filter only unique values
     header_row.extend(cols)
     for window in flare_windows:
         header_row.append('C_flare_in_'+str(window)+'h')
@@ -139,7 +141,7 @@ def main():
     # open labels file and write header
     out_file = open(out_filename,'w')
     out_writer = csv.writer(out_file,delimiter=',')
-    write_header(flare_windows,out_writer,samples.columns[5:])
+    write_header(flare_windows,out_writer,samples.columns)
 
     # iterate through index and add flare label data
     for i in samples.index:
