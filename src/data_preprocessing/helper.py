@@ -102,7 +102,7 @@ def check_quality(data,header):
     """
     if data == 'MDI':
         # for MDI, check for many missing values
-        if header['MISSVALS'] > 2000:
+        if header['MISSVALS'] > 2000 or header['QUALITY'] == 262656:
             return False
     elif data == 'HMI':
         # for HMI, good quality images have quality keyword 0
