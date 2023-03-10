@@ -36,16 +36,20 @@ def parse_args(args=None):
 
     return parser.parse_args(args)
 
-def write_header(flare_windows,out_writer):
+def write_header(flare_windows,out_writer,cols=[]):
     """
     Writes header columns to labels file
 
     Parameters:
         flare_windows (list):   forecasting windows in hours
         out_writer:             csv writer object to write header to
+        cols:                   additional columns for header
     """
     # header columns
     header_row = ['filename','sample_time','dataset']
+    cols = [col.rstrip('_MDIHWOSPG512') for col in cols if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
+    cols = list(set(cols))  # filter only unique values
+    header_row.extend(cols)
     for window in flare_windows:
         header_row.append('C_flare_in_'+str(window)+'h')
         header_row.append('M_flare_in_'+str(window)+'h')
@@ -96,16 +100,16 @@ def generate_file_data(sample,flares,flare_windows):
 
     # find prefered dataset for that day out of those available
     for dataset in datasets:
-        if 'fname_'+dataset not in sample:
+        if 'filename_'+dataset not in sample:
             continue
-        if pd.notna(sample['fname_'+dataset]):
-            fname = sample['fname_'+dataset]
+        if pd.notna(sample['filename_'+dataset]):
+            fname = sample['filename_'+dataset]
             sample_time = sample['timestamp_'+dataset]
             data = dataset
+            file_data = [fname,sample_time,data]
+            file_data.extend(list(sample.loc[sample.index.str.endswith('_'+dataset)])[4:])
             break
     
-    file_data = [fname,sample_time,data]
-
     # add flare labels for each forecast window
     for window in flare_windows:
         flare_data = flares[(flares['peak_time']>=sample_time)&(flares['peak_time']<=sample_time+timedelta(hours=window))]
@@ -137,7 +141,7 @@ def main():
     # open labels file and write header
     out_file = open(out_filename,'w')
     out_writer = csv.writer(out_file,delimiter=',')
-    write_header(flare_windows,out_writer)
+    write_header(flare_windows,out_writer,samples.columns)
 
     # iterate through index and add flare label data
     for i in samples.index:

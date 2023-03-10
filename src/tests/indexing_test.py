@@ -24,11 +24,14 @@ class IndexingTest(unittest.TestCase):
         self.filename='src/tests/index_SPMG.csv'
         self.csv_file = open(self.filename,'w')
         self.csv_writer = csv.writer(self.csv_file,delimiter=',')
-        self.csv_writer.writerow(['filename','fits_file','date','timestamp','t_obs','tot_us_flux','tot_flux','datamin','datamax'])
-        self.df_HMI = pd.DataFrame({'filename':['hmi.h5'],
-                                    'fits_file':['hmi.fits'],
+        header = ['filename','fits_file','timestamp','t_obs','tot_us_flux','tot_flux','datamin','datamax']
+        header = [key+'_'+self.data for key in header]
+        header.insert(2,'date')
+        self.csv_writer.writerow(header)
+        self.df_HMI = pd.DataFrame({'filename_HMI':['hmi.h5'],
+                                    'fits_file_HMI':['hmi.fits'],
                                     'date':[20110102],
-                                    'timestamp':[datetime(2011,2,1,0)]})
+                                    'timestamp_HMI':[datetime(2011,2,1,0)]})
         self.fileHMI = self.df_HMI.to_csv('src/tests/index_HMI.csv',index=False)
         self.cols = ['t_obs']
 
