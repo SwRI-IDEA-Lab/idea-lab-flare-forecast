@@ -15,8 +15,8 @@ import yaml
 
 def main():
     # read in config file
-    with open('snakemake_config.yaml') as config_file:
-        config = yaml.safe_load(config_file.read())['experiment']
+    with open('experiment_config.yaml') as config_file:
+        config = yaml.safe_load(config_file.read())
     
     wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
@@ -40,7 +40,7 @@ def main():
 
     # define model
     model = convnet_sc(dim=dim,length=1,dropoutRatio=dropout_ratio)
-    classifier = LitConvNet(model,lr,wd)
+    classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # initialize wandb logger
     wandb_logger = WandbLogger()

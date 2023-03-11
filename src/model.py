@@ -99,12 +99,14 @@ class LitConvNet(pl.LightningModule):
             model (torch.nn.Module):    a PyTorch model that ingests magnetograms and outputs a binary classification
             lr (float):                 learning rate
             wd (float):                 L2 regularization parameter
+            epochs (int):               Number of epochs for scheduler
     """
-    def __init__(self,model,lr=1e-4,wd=1e-2):
+    def __init__(self,model,lr:float=1e-4,wd:float=1e-2,epochs:int=100):
         super().__init__()
         self.model = model
         self.lr = lr
         self.weight_decay = wd
+        self.epochs = epochs
         # define loss function
         self.loss = nn.BCELoss()    
         # define metrics
@@ -114,6 +116,11 @@ class LitConvNet(pl.LightningModule):
         self.val_f1 = torchmetrics.F1Score(task='binary')
         self.val_bss = torchmetrics.MeanSquaredError()
         self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
+        self.test_acc = torchmetrics.Accuracy(task='binary')
+        self.test_aps = torchmetrics.AveragePrecision(task='binary')
+        self.test_f1 = torchmetrics.F1Score(task='binary')
+        self.test_bss = torchmetrics.MeanSquaredError()
+        self.test_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
         self.save_hyperparameters(ignore=['model'])
 
     def training_step(self,batch,batch_idx):
@@ -166,6 +173,9 @@ class LitConvNet(pl.LightningModule):
         self.log('val_bss',self.val_bss)
 
     def validation_epoch_end(self,outputs):
+        """
+        Finish logging validation metrics at end of epoch
+        """
         confusion_matrix = self.val_confusion_matrix.compute()
         tp = confusion_matrix[1,1].type(torch.FloatTensor)
         tn = confusion_matrix[0,0].type(torch.FloatTensor)
@@ -176,19 +186,52 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'val_TP':tp,'val_TN':tn,'val_FP':fp,'val_FN':fn,'val_tss':tss,'val_hss':hss})
         self.val_confusion_matrix.reset()
 
-    def configure_optimizers(self):
+    def test_step(self,batch,batch_idx):
         """
-            Sets up the optimizer.
+            Runs the model on the test set and logs test metrics 
 
             Parameters:
-                lr (float):             learning rate
-                weight_decay (float):   L2 regularization parameter
+                batch:                  batch from a DataLoader
+                batch_idx:              index of batch                  
+        """
+        fname, x, y = batch
+        y = y.view(y.shape[0],-1)
+        # forward pass
+        y_hat = self.model(x)
+
+        # calculate metrics
+        self.test_acc(y_hat,y)
+        self.test_aps(y_hat,y)
+        self.test_f1(y_hat,y)
+        self.test_bss(y_hat,y)
+        self.test_confusion_matrix.update(y_hat,y)
+
+        self.log('test_acc',self.test_acc)
+        self.log('test_aps',self.test_aps)
+        self.log('test_f1',self.test_f1)
+        self.log('test_bss',self.test_bss)
+
+    def test_epoch_end(self,outputs):
+        confusion_matrix = self.test_confusion_matrix.compute()
+        tp = confusion_matrix[1,1].type(torch.FloatTensor)
+        tn = confusion_matrix[0,0].type(torch.FloatTensor)
+        fp = confusion_matrix[0,1].type(torch.FloatTensor)
+        fn = confusion_matrix[1,0].type(torch.FloatTensor)
+        tss = (tp) / (tp + fn) - (fp) / (fp + tn)
+        hss = 2*(tp*tn-fp*fn)/((tp+fp)*(fp+tn)+(tp+fn)*(fn+tn))
+        self.log_dict({'test_TP':tp,'test_TN':tn,'test_FP':fp,'test_FN':fn,'test_tss':tss,'test_hss':hss})
+        self.test_confusion_matrix.reset()
+
+    def configure_optimizers(self):
+        """
+            Sets up the optimizer and learning rate scheduler.
             
             Returns:
                 optimizer:              A torch optimizer
         """
         optimizer = optim.Adam(self.model.parameters(),lr=self.lr,weight_decay=self.weight_decay)
-        return optimizer
+        scheduler = optim.lr_scheduler.CosineAnnealing(optimizer,T_max=self.epochs)
+        return [optimizer],[scheduler]
 
     def predict_step(self,batch,batch_idx,dataloader_idx=0):
         """
