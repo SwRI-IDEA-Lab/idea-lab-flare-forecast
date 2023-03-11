@@ -14,19 +14,23 @@ from pytorch_lightning.loggers import WandbLogger
 import yaml
 
 def main():
-    # set dataset file and parameters
-    datafile = 'Data/labels_MDI.csv'
-    window = 24     # forecast window (hours)
-    dim = 128
-    dropout_ratio = 0
-    split_type = 'temporal'
-    label = 'high_flux'
+    # read in config file
+    with open('snakemake_config.yaml') as config_file:
+        config = yaml.safe_load(config_file.read())['experiment']
     
-    wandb.init(config=None)
+    wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
-    lr = config.lr
-    wd = config.wd
-    batch = config.batch_size
+
+    datafile = config.data['datafile']
+    window = config.data['window']
+    dim = config.data['dim']
+    split_type = config.data['split_type']
+    label = config.data['label']
+    dropout_ratio = config.model['dropout_ratio']
+    lr = config.training['lr']
+    wd = config.training['wd']
+    batch = config.training['batch_size']
+    epochs = config.training['epochs']
 
     # set seeds
     pl.seed_everything(42,workers=True)
@@ -41,17 +45,9 @@ def main():
     # initialize wandb logger
     wandb_logger = WandbLogger()
 
-    # add parameters to wandb config
-    wandb_logger.experiment.config.update({'datafile':datafile,
-                                           'forecast_window':window,
-                                           'dim':dim,
-                                           'dropout_ratio':dropout_ratio,
-                                           'split_type':split_type,
-                                           'label':label})
-
     # train model
     trainer = pl.Trainer(deterministic=True,
-                         max_epochs=80,
+                         max_epochs=epochs,
                          log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2)],
                          limit_train_batches=15,
