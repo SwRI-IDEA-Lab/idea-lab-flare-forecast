@@ -230,7 +230,7 @@ class LitConvNet(pl.LightningModule):
                 optimizer:              A torch optimizer
         """
         optimizer = optim.Adam(self.model.parameters(),lr=self.lr,weight_decay=self.weight_decay)
-        scheduler = optim.lr_scheduler.CosineAnnealing(optimizer,T_max=self.epochs)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer,T_max=self.epochs)
         return [optimizer],[scheduler]
 
     def predict_step(self,batch,batch_idx,dataloader_idx=0):
