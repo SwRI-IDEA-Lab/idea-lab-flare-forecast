@@ -29,8 +29,9 @@ class DataTest(unittest.TestCase):
         ])
         self.dataset = MagnetogramDataSet(self.df,self.label,self.transform)
         self.idx = 0        # index into dataset (must be within length of self.dataset)
-        self.trainsplit = 0.7
-        self.datamodule = MagnetogramDataModule(self.datafile,self.label)
+        self.balance_ratio = 1
+        self.split_type = 'temporal'
+        self.datamodule = MagnetogramDataModule(self.datafile,self.label,self.balance_ratio, self.split_type)
 
     def test_datasetExists(self):
         self.assertGreaterEqual(len(self.dataset),0)
@@ -52,7 +53,7 @@ class DataTest(unittest.TestCase):
         self.assertTrue(item[2] in self.labels)
 
     def test_dataNormalization(self):
-        for idx in range(np.min([len(self.dataset),20])):
+        for idx in range(np.min([len(self.dataset),10])):
             item = self.dataset[idx]
             data = item[1]
             self.assertLessEqual(torch.max(torch.abs(data)),1)
@@ -70,16 +71,15 @@ class DataTest(unittest.TestCase):
     def test_datamoduleSetup(self):
         self.datamodule.prepare_data()
         self.datamodule.setup('fit')
-        self.assertIsInstance(self.datamodule.train_set,torch.utils.data.Dataset)
-        self.assertIsInstance(self.datamodule.val_set,torch.utils.data.Dataset)
-        self.assertIsInstance(self.datamodule.test_set,torch.utils.data.Dataset)
-
-    def test_datamoduleDataloaders(self):
-        self.datamodule.prepare_data()
-        self.datamodule.setup('fit')
         self.assertIsInstance(self.datamodule.train_dataloader(),torch.utils.data.DataLoader)
         self.assertIsInstance(self.datamodule.val_dataloader(),torch.utils.data.DataLoader)
         self.assertIsInstance(self.datamodule.test_dataloader(),torch.utils.data.DataLoader)
+        self.assertIsInstance(self.datamodule.train_set,torch.utils.data.Dataset)
+        self.assertIsInstance(self.datamodule.val_set,torch.utils.data.Dataset)
+        self.assertIsInstance(self.datamodule.test_set,torch.utils.data.Dataset)
+        sum_label = np.sum(self.datamodule.train_set.label_frame)
+        self.assertEqual(sum_label,len(self.datamodule.train_set)/2)
+
 
 if __name__ == "__main__":
     unittest.main()

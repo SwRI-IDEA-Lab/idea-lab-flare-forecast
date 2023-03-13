@@ -4,6 +4,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
+import random
 from torch.utils.data import Dataset,DataLoader
 from datetime import datetime,timedelta
 
@@ -65,11 +66,13 @@ class MagnetogramDataModule(pl.LightningDataModule):
         Parameters:
             data_file (str):        file containing magnetogram filenames and labels
             label (str):            name of column for label data (i.e., 'flare' or 'high_flux')
+            balance_ratio (int):    ratio of negatives to positives to impose, None for unbalanced
+            split_type (str):       method of splitting training and validation data ('random' or 'temporal')
             forecast_window (int):  number of hours for forecast
             dim (int):              dimension for scaling data
             batch (int):            batch size for all dataloaders
     """
-    def __init__(self, data_file: str, label: str, split_type: str = 'random', forecast_window: int = 24, dim: int = 256, batch: int = 32):
+    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', forecast_window: int = 24, dim: int = 256, batch: int = 32):
         super().__init__()
         self.data_file = data_file
         self.label = label
@@ -77,6 +80,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.flare_thresh = 1e-5    # M flare
         self.forecast_window = forecast_window
         self.split_type = split_type
+        self.balance_ratio = balance_ratio
         self.batch_size = batch
         # define data transforms
         self.transform = transforms.Compose([
@@ -105,20 +109,31 @@ class MagnetogramDataModule(pl.LightningDataModule):
         
         # perform splitting of training and validation set
         if self.split_type == 'random':
-            data_full = MagnetogramDataSet(df_full,self.label,self.transform)
-            self.train_set, self.val_set = torch.utils.data.random_split(data_full,[0.7,0.3])
+            df_train = df_full.sample(frac=0.7,random_state=42)
+            df_val = df_full.drop(df_train.index)
         elif self.split_type == 'temporal':
             inds_train = df_full['sample_time'].dt.month < 9
             df_train = df_full.loc[inds_train,:]
             df_val = df_full.loc[~inds_train,:]
-            self.train_set = MagnetogramDataSet(df_train,self.label,self.transform)
-            self.val_set = MagnetogramDataSet(df_val,self.label,self.transform)
-        
+
+        # balance training data
+        if self.balance_ratio != None:
+            df_train = df_train
+            inds_train = np.array(df_train[self.label]==1)
+            inds_neg = np.where(df_train[self.label]==0)[0]
+            random.shuffle(inds_neg)
+            inds_train[inds_neg[:self.balance_ratio*np.sum(inds_train)]] = 1
+            df_train = df_train.iloc[inds_train,:]
+
+        self.train_set = MagnetogramDataSet(df_train,self.label,self.transform)
+        self.val_set = MagnetogramDataSet(df_val,self.label,self.transform)
         self.test_set = MagnetogramDataSet(df_test,self.label,self.transform)
         print('Train:',len(self.train_set),
               'Valid:',len(self.val_set),
               'Test:',len(self.test_set))
-        print('Flare/no-flare ratio in training+val:',sum(df_full['flare']==1),sum(df_full['flare']==0))
+        print('Flare/no-flare ratio in training:',sum(df_train['flare']==1),sum(df_train['flare']==0))
+        print('Flare/no-flare ratio in validation:',sum(df_val['flare']==1),sum(df_val['flare']==0))
+        print('Flare/no-flare ratio in test:',sum(df_test['flare']==1),sum(df_test['flare']==0))
 
     def train_dataloader(self):
         return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4,shuffle=True)
