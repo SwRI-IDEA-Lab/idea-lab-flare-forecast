@@ -4,7 +4,7 @@ from torch import nn
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelSummary
+from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
 import pandas as pd
@@ -15,16 +15,17 @@ import yaml
 
 def main():
     # read in config file
-    with open('experiment_config.yaml') as config_file:
+    with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
     
     wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
-    datafile = config.data['datafile']
-    window = config.data['window']
+    data_file = config.data['data_file']
+    window = config.data['forecast_window']
     dim = config.data['dim']
     split_type = config.data['split_type']
+    balance_ratio = config.data['balance_ratio']
     label = config.data['label']
     dropout_ratio = config.model['dropout_ratio']
     lr = config.training['lr']
@@ -36,7 +37,11 @@ def main():
     pl.seed_everything(42,workers=True)
 
     # define data module
-    data = MagnetogramDataModule(data_file=datafile,label=label,split_type=split_type,forecast_window=window,dim=dim,batch=batch)
+    data = MagnetogramDataModule(data_file=data_file,
+                                 label=label,
+                                 balance_ratio=balance_ratio,
+                                 split_type=split_type,
+                                 forecast_window=window,dim=dim,batch=batch)
 
     # define model
     model = convnet_sc(dim=dim,length=1,dropoutRatio=dropout_ratio)
@@ -44,14 +49,15 @@ def main():
 
     # initialize wandb logger
     wandb_logger = WandbLogger()
+    checkpoint_callback = ModelCheckpoint()
 
     # train model
     trainer = pl.Trainer(deterministic=True,
                          max_epochs=epochs,
-                         log_every_n_steps=4,
+                        #  log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2)],
-                         limit_train_batches=15,
-                         limit_val_batches=5,
+                        #  limit_train_batches=15,
+                        #  limit_val_batches=5,
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
 
