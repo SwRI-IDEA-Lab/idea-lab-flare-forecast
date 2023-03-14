@@ -142,7 +142,10 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
 
         # open file
         with fits.open(root_dir/data/year/file,cache=False) as data_fits:
-            data_fits.verify('fix')
+            try:    # catch errors with header characters not handled well by verify
+                data_fits.verify('fix')
+            except ValueError:
+                continue
             img,header = extract_fits(data_fits,data)           
 
         # index_file
