@@ -145,7 +145,7 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'loss':loss,
                        'train_acc':self.train_acc,
                        'train_f1':self.train_f1},
-                       on_step=True,on_epoch=False)
+                       on_step=False,on_epoch=True)
         return loss
     
     def validation_step(self,batch,batch_idx):
@@ -174,7 +174,8 @@ class LitConvNet(pl.LightningModule):
                       'val_acc':self.val_acc,
                       'val_aps':self.val_aps,
                       'val_f1':self.val_f1,
-                      'val_bss':self.val_bss})
+                      'val_bss':self.val_bss},
+                      on_step=False,on_epoch=True)
 
     def validation_epoch_end(self,outputs):
         """
