@@ -20,6 +20,7 @@ from src.utils.utils import reprojectToVirtualInstrument, scale_rotate, zeroLimb
 import argparse
 from sunpy.map import Map
 import sys
+from multiprocessing import Pool
 import pandas as pd
 import time
 # Remove Warnings
@@ -177,7 +178,9 @@ def main():
         filename = 'Data/index_'+data+'.csv'
 
         # header data for csv file
-        header = ['filename','fits_file','timestamp','t_obs','crln_obs','crlt_obs','dsun_obs']
+        header = ['filename','fits_file','timestamp']
+        metadata_cols = ['t_obs']
+        header.extend(metadata_cols)
         header.extend(['tot_us_flux','tot_flux','datamin','datamax'])
         header = [key+'_'+data for key in header]
         header.insert(2,'date')
@@ -204,7 +207,7 @@ def main():
     if len(datasets)>1:
         df_merged = merge_indices_by_date(Path('Data'),datasets)
         filename_merged = '_'.join([data for data in datasets])
-        df_merged.to_csv(root_dir/('index_'+filename_merged),index=False)
+        df_merged.to_csv('Data/index_'+filename_merged,index=False)
 
 if __name__ == '__main__':
     main()
