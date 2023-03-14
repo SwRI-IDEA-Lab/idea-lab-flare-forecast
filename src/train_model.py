@@ -22,13 +22,7 @@ def main():
     wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
-    data_file = config.data['data_file']
-    window = config.data['forecast_window']
     dim = config.data['dim']
-    split_type = config.data['split_type']
-    balance_ratio = config.data['balance_ratio']
-    label = config.data['label']
-    dropout_ratio = config.model['dropout_ratio']
     lr = config.training['lr']
     wd = config.training['wd']
     batch = config.training['batch_size']
@@ -38,14 +32,19 @@ def main():
     pl.seed_everything(42,workers=True)
 
     # define data module
-    data = MagnetogramDataModule(data_file=data_file,
-                                 label=label,
-                                 balance_ratio=balance_ratio,
-                                 split_type=split_type,
-                                 forecast_window=window,dim=dim,batch=batch)
+    data = MagnetogramDataModule(data_file=config.data['data_file'],
+                                 label=config.data['label'],
+                                 balance_ratio=config.data['balance_ratio'],
+                                 split_type=config.data['split_type'],
+                                 forecast_window=config.data['forecast_window'],
+                                 dim=dim,
+                                 batch=batch,
+                                 augmentation=config.data['augmentation'],
+                                 flare_thresh=config.data['flare_thresh'],
+                                 flux_thresh=config.data['flux_thresh'])
 
     # define model
-    model = convnet_sc(dim=dim,length=1,dropoutRatio=dropout_ratio)
+    model = convnet_sc(dim=dim,length=1,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # initialize wandb logger

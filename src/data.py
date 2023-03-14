@@ -71,22 +71,43 @@ class MagnetogramDataModule(pl.LightningDataModule):
             forecast_window (int):  number of hours for forecast
             dim (int):              dimension for scaling data
             batch (int):            batch size for all dataloaders
+            augmentation (str):     option to choose between None, conservative, or full data augmentation
+            flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
+            flux_thresh (float):    threshold for total unsigned flux to label as positive (default 4e7)
     """
-    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', forecast_window: int = 24, dim: int = 256, batch: int = 32):
+    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', forecast_window: int = 24, dim: int = 256, batch: int = 32, augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 4e7):
         super().__init__()
         self.data_file = data_file
         self.label = label
-        self.flux_thresh = 4e7
-        self.flare_thresh = 1e-5    # M flare
+        self.flux_thresh = flux_thresh
+        self.flare_thresh = flare_thresh
         self.forecast_window = forecast_window
         self.split_type = split_type
         self.balance_ratio = balance_ratio
         self.batch_size = batch
+
         # define data transforms
         self.transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
+            transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True)
         ])
+
+        if augmentation == 'conservative':
+            self.training_transform =  transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
+                transforms.RandomVerticalFlip(p=0.5)
+            ])
+        elif augmentation == 'full':
+            self.training_transform =  transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
+                transforms.RandomVerticalFlip(p=0.5),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomRotation(20)
+            ])
+        else:
+            self.training_transform = self.transform
 
     def prepare_data(self):
         # load dataframe
@@ -125,7 +146,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
             inds_train[inds_neg[:self.balance_ratio*np.sum(inds_train)]] = 1
             df_train = df_train.iloc[inds_train,:]
 
-        self.train_set = MagnetogramDataSet(df_train,self.label,self.transform)
+        self.train_set = MagnetogramDataSet(df_train,self.label,self.training_transform)
         self.val_set = MagnetogramDataSet(df_val,self.label,self.transform)
         self.test_set = MagnetogramDataSet(df_test,self.label,self.transform)
         print('Train:',len(self.train_set),
