@@ -43,9 +43,6 @@ class MagnetogramDataSet(Dataset):
         label = self.label_frame.iloc[idx]
 
         # Normalize magnetogram data
-        # 1.3 calibration factor for MDI data
-        if self.dataset_frame.iloc[idx] == 'mdi':
-            img = img/1.3
         # clip magnetogram data within max value
         maxval = 1000  # Gauss
         img[np.where(img>maxval)] = maxval
