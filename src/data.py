@@ -6,6 +6,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from torch.utils.data import Dataset,DataLoader
+from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
 class MagnetogramDataSet(Dataset):
@@ -96,7 +97,8 @@ class MagnetogramDataModule(pl.LightningDataModule):
             self.training_transform =  transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
-                transforms.RandomVerticalFlip(p=0.5)
+                transforms.RandomVerticalFlip(p=0.5),
+                RandomPolaritySwitch(p=0.5),
             ])
         elif augmentation == 'full':
             self.training_transform =  transforms.Compose([
@@ -104,7 +106,8 @@ class MagnetogramDataModule(pl.LightningDataModule):
                 transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
                 transforms.RandomVerticalFlip(p=0.5),
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation(20)
+                transforms.RandomRotation(20),
+                RandomPolaritySwitch(p=0.5)
             ])
         else:
             self.training_transform = self.transform
