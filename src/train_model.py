@@ -4,7 +4,8 @@ from torch import nn
 from torchvision import transforms
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
+from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
 import pandas as pd
@@ -48,14 +49,15 @@ def main():
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # initialize wandb logger
-    wandb_logger = WandbLogger()
-    checkpoint_callback = ModelCheckpoint()
+    wandb_logger = WandbLogger(log_model='all')
+    checkpoint_callback = ModelCheckpoint(monitor='val_tss',mode='max')
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
 
     # train model
     trainer = pl.Trainer(deterministic=True,
                          max_epochs=epochs,
                         #  log_every_n_steps=4,
-                         callbacks=[ModelSummary(max_depth=2)],
+                         callbacks=[ModelSummary(max_depth=2),checkpoint_callback,early_stop_callback],
                         #  limit_train_batches=15,
                         #  limit_val_batches=5,
                          logger=wandb_logger)
