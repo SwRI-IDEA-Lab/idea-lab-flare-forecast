@@ -61,8 +61,7 @@ def main():
     trainer = pl.Trainer(deterministic=True,
                          max_epochs=epochs,
                         #  log_every_n_steps=4,
-                         callbacks=[ModelSummary(max_depth=2),early_stop_callback],
-                         checkpoint_callback=checkpoint_callback,
+                         callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
                         #  limit_train_batches=15,
                         #  limit_val_batches=5,
                          logger=wandb_logger)

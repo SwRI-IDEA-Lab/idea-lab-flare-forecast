@@ -6,7 +6,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from torch.utils.data import Dataset,DataLoader
-from src.utils.transforms import RandomPolaritySwitch
+from utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
 class MagnetogramDataSet(Dataset):
