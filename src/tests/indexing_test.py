@@ -67,7 +67,7 @@ class IndexingTest(unittest.TestCase):
         print(index_data)
 
     def test_mergeIndices(self):
-        index = index_year(self.root_dir,self.data,self.year,self.cols,self.new_dir,test=True)
+        index, errors = index_year(self.root_dir,self.data,self.year,self.cols,self.new_dir,test=True)
         df = pd.DataFrame(index,columns=self.header)
         df.to_csv(self.filename,index=False)
         df_MDI = pd.read_csv(self.filename)

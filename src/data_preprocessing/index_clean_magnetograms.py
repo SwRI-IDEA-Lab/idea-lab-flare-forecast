@@ -126,11 +126,13 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
     
     Returns:
         index:              list of index data for all files in year
+        error_files:        list of any files which threw errors
     """
     n = 0
     index = []
     t0 = time.time()
     lastdate = '19600101'
+    error_files = []
 
     for file in sorted(os.listdir(root_dir/data/year)):
         # extract date and time from filename
@@ -140,16 +142,19 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
         if date == None or (onefileperday and date == lastdate):
             continue
 
-        # open file
-        with fits.open(root_dir/data/year/file,cache=False) as data_fits:
-            try:    # catch errors with header characters not handled well by verify
+        try:
+            # open file
+            with fits.open(root_dir/data/year/file,cache=False) as data_fits:
                 data_fits.verify('fix')
-            except ValueError:
-                continue
-            img,header = extract_fits(data_fits,data)           
 
-        # index_file
-        index_data = index_item(root_dir/data/year/file,img,header,data,date,timestamp,metadata_cols,new_dir/year)
+                img,header = extract_fits(data_fits,data)           
+
+            # index_file
+            index_data = index_item(root_dir/data/year/file,img,header,data,date,timestamp,metadata_cols,new_dir/year)
+        except ValueError:
+            error_files.append(str(root_dir/data/year/file))
+            continue
+
         if index_data == None:
             continue
         # file was indexed so save last date as current date
@@ -165,7 +170,7 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
 
     t1 = time.time()
     print(n, 'files indexed for ',data,year,'in',round((t1-t0)/60,2),'minutes')
-    return index
+    return index, error_files
 
 def merge_indices_by_date(root_dir,datasets):
     """
@@ -213,12 +218,16 @@ def main():
         args = [(root_dir,data,year,metadata_cols,new_dir/data) for year in years]
 
         # index years in parallel and write results to csv
+        error_files = []
         with Pool(8) as pool:
-            for index in pool.starmap(index_year,args):
+            for result in pool.starmap(index_year,args):
+                index = result[0]
+                error_files.extend(result[1])
                 out_writer.writerows(index) 
 
         out_file.close()
         print('Finished indexing',data)    
+        print('Errors on:',error_files)
 
     if len(datasets)>1:
         df_merged = merge_indices_by_date(Path('Data'),datasets)
