@@ -24,10 +24,10 @@ class IndexingTest(unittest.TestCase):
         self.filename='src/tests/index_SPMG.csv'
         self.csv_file = open(self.filename,'w')
         self.csv_writer = csv.writer(self.csv_file,delimiter=',')
-        header = ['filename','fits_file','timestamp','t_obs','tot_us_flux','tot_flux','datamin','datamax']
-        header = [key+'_'+self.data for key in header]
-        header.insert(2,'date')
-        self.csv_writer.writerow(header)
+        self.header = ['filename','fits_file','timestamp','t_obs','tot_us_flux','tot_flux','datamin','datamax']
+        self.header = [key+'_'+self.data for key in self.header]
+        self.header.insert(2,'date')
+        self.csv_writer.writerow(self.header)
         self.df_HMI = pd.DataFrame({'filename_HMI':['hmi.h5'],
                                     'fits_file_HMI':['hmi.fits'],
                                     'date':[20110102],
@@ -50,26 +50,28 @@ class IndexingTest(unittest.TestCase):
     
     def test_checkQuality(self):
         self.assertTrue(check_quality(data='MWO',header={}))
-        self.assertFalse(check_quality(data='MDI',header={'MISSVALS':5000}))
-        self.assertTrue(check_quality(data='MDI',header={'MISSVALS':0}))
+        self.assertFalse(check_quality(data='MDI',header={'MISSVALS':5000,'QUALITY':0}))
+        self.assertTrue(check_quality(data='MDI',header={'MISSVALS':0,'QUALITY':0}))
         self.assertFalse(check_quality(data='HMI',header={'QUALITY':1}))
         self.assertTrue(check_quality(data='HMI',header={'QUALITY':0}))
 
     def test_indexItem(self):
         file = self.root_dir/self.data/self.year/self.fitsfile
+        date,timestamp = extract_date_time(self.fitsfile,self.data,self.year)
         with fits.open(file,cache=False) as data_fits:
             data_fits.verify('fix')
             img,header = extract_fits(data_fits,self.data)
-        index_data = index_item(file,img,header,self.cols,self.new_dir/self.year)    
+        index_data = index_item(file,img,header,self.data,date,timestamp,self.cols,self.new_dir/self.year)    
         self.assertIsInstance(index_data,list)
         self.assertEqual(len(index_data),8+len(self.cols))
         print(index_data)
 
     def test_mergeIndices(self):
-        n = index_year(self.root_dir,self.data,self.year,self.csv_writer,self.cols,self.new_dir,test=True)
-        self.csv_file.close()
+        index, errors = index_year(self.root_dir,self.data,self.year,self.cols,self.new_dir,test=True)
+        df = pd.DataFrame(index,columns=self.header)
+        df.to_csv(self.filename,index=False)
         df_MDI = pd.read_csv(self.filename)
-        self.assertEqual(n,len(df_MDI))
+        self.assertEqual(len(index),len(df_MDI))
         df_merged = merge_indices_by_date(Path('src/tests'),self.multiple_data)
         self.assertIsInstance(df_merged,pd.DataFrame)
         self.assertTrue('date' in df_merged.columns)
