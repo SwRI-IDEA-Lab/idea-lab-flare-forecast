@@ -1,0 +1,22 @@
+# config file for torch lightning
+
+meta: 
+  project: 'flare-forecast'
+data:
+  data_file: 'Data/labels_MDI.csv'
+  forecast_window: 24
+  dim: 128
+  split_type: 'temporal'
+  balance_ratio: 1
+  label: 'flare'
+  flux_thresh: 40000000
+  flare_thresh: 0.00001
+  augmentation: None
+model:
+  dropout_ratio: 0
+training:
+  lr: 0.0001
+  wd: 0.001
+  batch_size: 64
+  epochs: 50
+  
