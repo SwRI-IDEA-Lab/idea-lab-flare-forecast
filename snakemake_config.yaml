@@ -1,0 +1,18 @@
+# set up download parameters
+email: 'kiera.vds@gmail.com'
+start_date: '2015-01-01'
+end_date: '2015-01-02'
+wavelength: 171
+instrument: 'HMI'                
+save_dir: 'Data'   # where to save data
+cadence: '1d'      # desired cadence (much less than 1 day may require
+format: 'fits'
+dlim: 1000
+newdir: 'Data/HDF5'
+
+# set up labeling parameters
+forecast_windows: ['12'] #'24''48'
+
+# set up experiment parameters
+experiment:
+

@@ -98,6 +98,7 @@ def index_item(file,img,header,data,date,timestamp,metadata_cols,new_dir):
     # save new hdf5 file
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
+
     new_file = new_dir / (data +'_magnetogram.' + datetime.strftime(timestamp,'%Y%m%d_%H%M%S') +'_TAI.h5')
     with h5py.File(new_file,'w') as h5:
         h5.create_dataset('magnetogram',data=reproject_map.data,compression='gzip')
@@ -134,6 +135,10 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
     lastdate = '19600101'
     error_files = []
 
+    if not os.path.isdir(root_dir/data/year):
+        # check that this is acually a directory
+        return None,None
+    
     for file in sorted(os.listdir(root_dir/data/year)):
         # extract date and time from filename
         date,timestamp = extract_date_time(file,data,year)
@@ -196,9 +201,15 @@ def main():
     root_dir = Path(parser.root)
     new_dir = Path(parser.newdir)
 
+    if not os.path.exists(new_dir):
+        os.mkdir(new_dir)
+
     for data in datasets:
         data = data.upper()
         filename = 'Data/index_'+data+'.csv'
+
+        if not os.path.exists(new_dir/data):
+            os.mkdir(new_dir/data)
 
         # header data for csv file
         header = ['filename','fits_file','timestamp']
@@ -219,7 +230,7 @@ def main():
 
         # index years in parallel and write results to csv
         error_files = []
-        with Pool(8) as pool:
+        with Pool(4) as pool:
             for result in pool.starmap(index_year,args):
                 index = result[0]
                 error_files.extend(result[1])
