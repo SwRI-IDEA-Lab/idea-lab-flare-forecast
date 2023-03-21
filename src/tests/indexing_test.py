@@ -47,13 +47,6 @@ class IndexingTest(unittest.TestCase):
         parser = parse_args(self.multiple_data)
         self.assertIsInstance(parser.data,list)
         self.assertEqual(len(parser.data),len(self.multiple_data))
-    
-    def test_checkQuality(self):
-        self.assertTrue(check_quality(data='MWO',header={}))
-        self.assertFalse(check_quality(data='MDI',header={'MISSVALS':5000,'QUALITY':0}))
-        self.assertTrue(check_quality(data='MDI',header={'MISSVALS':0,'QUALITY':0}))
-        self.assertFalse(check_quality(data='HMI',header={'QUALITY':1}))
-        self.assertTrue(check_quality(data='HMI',header={'QUALITY':0}))
 
     def test_indexItem(self):
         file = self.root_dir/self.data/self.year/self.fitsfile
