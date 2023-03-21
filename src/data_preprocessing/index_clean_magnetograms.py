@@ -137,7 +137,7 @@ def index_year(root_dir,data,year,metadata_cols,new_dir,onefileperday=True,test=
 
     if not os.path.isdir(root_dir/data/year):
         # check that this is acually a directory
-        return None,None
+        return index,error_files
     
     for file in sorted(os.listdir(root_dir/data/year)):
         # extract date and time from filename
@@ -230,7 +230,7 @@ def main():
 
         # index years in parallel and write results to csv
         error_files = []
-        with Pool(4) as pool:
+        with Pool(8) as pool:
             for result in pool.starmap(index_year,args):
                 index = result[0]
                 error_files.extend(result[1])
