@@ -35,7 +35,7 @@ class Downloader:
         self.sdate = datetime.date.fromisoformat(sdate)
         self.edate = datetime.date.fromisoformat(edate)
         self.instrument = instrument.lower()
-        self.validinstruments = ["aia", "hmi"]
+        self.validinstruments = ["aia", "hmi", "mdi"]
         self.wavelength = wavelength
         self.validwavelengths = [1700, 4500, 1600, 304, 171, 193, 211, 335, 94, 131]
         self.cadence = cadence
@@ -72,8 +72,11 @@ class Downloader:
             elif(self.wavelength == 4500):
                 jsocString = 'aia.lev1_vis_1h' + self.jsocString + f"[{self.wavelength}]"
 
-        if(self.instrument == 'hmi'):
+        elif(self.instrument == 'hmi'):
             jsocString = 'hmi.M_720s' + jsocString 
+        
+        elif(self.instrument == 'mdi'):
+            jsocString = 'mdi.fd_M_96m_lev182' + jsocString
         
         return jsocString
 

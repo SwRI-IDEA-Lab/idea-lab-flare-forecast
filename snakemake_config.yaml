@@ -1,14 +1,15 @@
 # set up download parameters
 email: 'kiera.vds@gmail.com'
-start_date: '2015-01-01'
-end_date: '2015-01-02'
+start_date: '2011-01-01'
+end_date: '2011-01-02'
 wavelength: 171
-instrument: 'HMI'                
-save_dir: 'Data'   # where to save data
+instrument_download: ['HMI','MDI']
+instrument_process: ['HMI', 'MDI', 'MWO'] 
+save_dir: 'Data_snaketest'   # where to save data
 cadence: '1d'      # desired cadence (much less than 1 day may require
 format: 'fits'
 dlim: 1000
-newdir: 'Data/HDF5'
+newdir: 'Data_snaketest/hdf5'
 
 # set up labeling parameters
 forecast_windows: ['12'] #'24''48'
