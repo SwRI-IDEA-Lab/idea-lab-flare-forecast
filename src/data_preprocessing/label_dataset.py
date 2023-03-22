@@ -57,6 +57,7 @@ def write_header(flare_windows,out_writer,cols=[]):
         header_row.append('flare_intensity_in_'+str(window)+'h')
 
     # write header to file
+    print(header_row)
     out_writer.writerow(header_row)
     return 
 
