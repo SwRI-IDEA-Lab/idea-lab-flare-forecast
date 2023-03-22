@@ -29,6 +29,29 @@ def read_catalog(filename,**kwargs):
             pass
     return df
 
+def add_label_data(flare_data):
+    """
+    Adds flare labeling data to a list
+
+    Parameters:
+        flare_data (dataframe):     relevant catalog of flares
+
+    Returns:
+        file_data (list):           list with labels for C, M, X flares 
+                                    and flare intensity
+    """
+    file_data = []
+    for flare_class in ['C','M','X']:
+        if sum(flare_data['CMX']==flare_class) > 0:
+            file_data.append(1)
+        else:
+            file_data.append(0)
+    if len(flare_data)>0:
+        file_data.append('{:0.1e}'.format(max(flare_data['intensity'])))
+    else:
+        file_data.append(0)
+    return file_data
+
 def extract_date_time(file,data,year):
     """
     Extracts date and time from a magnetogram fits filename. 
