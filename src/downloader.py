@@ -188,6 +188,6 @@ if __name__=="__main__":
                             parser.path, 
                             parser.downloadLimit)
     
-    downloader.assembleJsocString()
+    downloader.assembleJsocString(downloader.sdate, downloader.edate)
     downloader.downloadData()
 

@@ -7,7 +7,7 @@ from astropy.io import fits
 import numpy as np
 import sunpy
 from src.utils.utils import reprojectToVirtualInstrument, mapPixelArea, zeroLimbs
-from src.data_preprocessing.helper import compute_tot_flux
+from src.data_preprocessing.helper import compute_tot_flux, check_quality
 
 
 class DataCleaningTest(unittest.TestCase):
@@ -23,6 +23,13 @@ class DataCleaningTest(unittest.TestCase):
         self.scale = 4*u.Quantity([0.55,0.55],u.arcsec/u.pixel)
         self.dim = 1024
         self.zeroradius = 0.95
+
+    def test_checkQuality(self):
+        self.assertTrue(check_quality(data='MWO',header={}))
+        self.assertFalse(check_quality(data='MDI',header={'MISSVALS':5000,'QUALITY':0}))
+        self.assertTrue(check_quality(data='MDI',header={'MISSVALS':0,'QUALITY':0}))
+        self.assertFalse(check_quality(data='HMI',header={'QUALITY':1}))
+        self.assertTrue(check_quality(data='HMI',header={'QUALITY':0}))
 
     def test_reprojectIsMap(self):
         out_map = reprojectToVirtualInstrument(self.map)
