@@ -48,7 +48,7 @@ def write_header(flare_windows,out_writer,cols=[]):
     # header columns
     header_row = ['filename','sample_time','dataset']
     cols = [col.rstrip('_MDIHWOSPG512') for col in cols if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
-    cols = list(set(cols))  # filter only unique values
+    cols = list(dict.fromkeys(cols))  # filter only unique values
     header_row.extend(cols)
     for window in flare_windows:
         header_row.append('C_flare_in_'+str(window)+'h')
