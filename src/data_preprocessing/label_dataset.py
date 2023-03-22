@@ -6,7 +6,105 @@ import pandas as pd
 import argparse
 from datetime import datetime,timedelta
 import csv
-from src.data_preprocessing.helper import read_catalog
+from src.data_preprocessing.helper import read_catalog, add_label_data
+
+class Labeler():
+    def __init__(self,index_file:str = None,out_file:str = None,flare_catalog:str = None,flare_windows:list=[24]):
+        """
+        Initialize a labeling class to select best available data and add flare labels
+
+        Parameters:
+            index_file (str):       Path to index of data
+            out_file (str):         Filename to save labeled dataset
+            flare_catalog (str):    Path to index of flares
+            flare_windows (list):   Forecast windows in hours
+        """
+        self.flare_windows = flare_windows   
+        self.file = out_file
+
+        # read in flare catalog
+        self.flares = read_catalog(flare_catalog)
+
+        # read in index file
+        self.samples = read_catalog(index_file,na_values=' ')
+        # drop samples with the same date, keeping the first entry
+        self.samples.drop_duplicates(subset='date',keep='first',ignore_index=True,inplace=True)
+
+        # set start date for dataset as the max forecast window before the first flare in the catalog
+        start_date = int(datetime.strftime(self.flares['start_time'][0]-timedelta(hours = max(self.flare_windows)),'%Y%m%d'))
+        # discard samples earlier than the start date
+        self.samples = self.samples[self.samples['date']>=start_date]
+        self.samples.reset_index(drop=True,inplace=True)
+
+    def write_header(self):
+        """
+        Writes header columns to labels file
+        """
+        # header columns
+        header_row = ['filename','sample_time','dataset']
+        cols = [col.rstrip('_MDIHWOSPG512') for col in self.samples.columns if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
+        cols = list(dict.fromkeys(cols))  # filter only unique values
+        header_row.extend(cols)
+        for window in self.flare_windows:
+            header_row.append('C_flare_in_'+str(window)+'h')
+            header_row.append('M_flare_in_'+str(window)+'h')
+            header_row.append('X_flare_in_'+str(window)+'h')
+            header_row.append('flare_intensity_in_'+str(window)+'h')
+
+        # write header to file
+        print(header_row)
+        with open(self.file,'w') as out_file:
+            out_writer = csv.writer(out_file,delimiter=',')
+            out_writer.writerow(header_row)
+
+        return 
+    
+    def label_data(self):
+        """
+        Iterate through index and write flare label data to file
+        """
+        out_file = open(self.file,'w')
+        out_writer = csv.writer(out_file,delimiter=',')
+
+        for i in self.samples.index:
+            sample = self.samples.iloc[i]
+            file_data = self.generate_file_data(sample)
+            out_writer.writerow(file_data)
+
+        out_file.close()
+    
+    def generate_file_data(self,sample):
+        """
+        For a given data sample, generates list of information for labels file
+
+        Parameters:
+            sample:     pandas series with filenames and times for this days sample
+
+        Returns:
+            file_data:  list of data to write to labels file for this sample
+        """
+        # order of preference of datasets
+        datasets = ['HMI','MDI','SPMG','512','MWO']   
+
+        # find prefered dataset for that day out of those available
+        for dataset in datasets:
+            if 'filename_'+dataset not in sample:
+                continue
+            if pd.notna(sample['filename_'+dataset]):
+                fname = sample['filename_'+dataset]
+                sample_time = sample['timestamp_'+dataset]
+                data = dataset
+                file_data = [fname,sample_time,data]
+                file_data.extend(list(sample.loc[sample.index.str.endswith('_'+dataset)])[4:])
+                break
+        
+        # add flare labels for each forecast window
+        for window in self.flare_windows:
+            flare_data = self.flares[(self.flares['peak_time']>=sample_time)&(self.flares['peak_time']<=sample_time+timedelta(hours=window))]
+            file_data.extend(add_label_data(flare_data))
+
+        return file_data
+    
 
 def parse_args(args=None):
     """
@@ -36,121 +134,16 @@ def parse_args(args=None):
 
     return parser.parse_args(args)
 
-def write_header(flare_windows,out_writer,cols=[]):
-    """
-    Writes header columns to labels file
-
-    Parameters:
-        flare_windows (list):   forecasting windows in hours
-        out_writer:             csv writer object to write header to
-        cols:                   additional columns for header
-    """
-    # header columns
-    header_row = ['filename','sample_time','dataset']
-    cols = [col.rstrip('_MDIHWOSPG512') for col in cols if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
-    cols = list(dict.fromkeys(cols))  # filter only unique values
-    header_row.extend(cols)
-    for window in flare_windows:
-        header_row.append('C_flare_in_'+str(window)+'h')
-        header_row.append('M_flare_in_'+str(window)+'h')
-        header_row.append('X_flare_in_'+str(window)+'h')
-        header_row.append('flare_intensity_in_'+str(window)+'h')
-
-    # write header to file
-    print(header_row)
-    out_writer.writerow(header_row)
-    return 
-
-def add_label_data(flare_data,file_data):
-    """
-    Adds flare labeling data to a list
-
-    Parameters:
-        flare_data (dataframe):     relevant catalog of flares
-        file_data (list):           list of data to append labels to
-
-    Returns:
-        file_data (list):           with appended labels for C, M, X flares 
-                                    and flare intensity
-    """
-    for flare_class in ['C','M','X']:
-        if sum(flare_data['CMX']==flare_class) > 0:
-            file_data.append(1)
-        else:
-            file_data.append(0)
-    if len(flare_data)>0:
-        file_data.append('{:0.1e}'.format(max(flare_data['intensity'])))
-    else:
-        file_data.append(0)
-    return file_data
-
-def generate_file_data(sample,flares,flare_windows):
-    """
-    For a given data sample, generates list of information for labels file
-
-    Parameters:
-        sample:     pandas series with filenames and times for this days sample
-        flares:     dataframe containing the flare catalog
-        flare_windows:  list of forecasting windows
-    
-    Returns:
-        file_data:  list of data to write to labels file for this sample
-    """
-    # order of preference of datasets
-    datasets = ['HMI','MDI','SPMG','512','MWO']   
-
-    # find prefered dataset for that day out of those available
-    for dataset in datasets:
-        if 'filename_'+dataset not in sample:
-            continue
-        if pd.notna(sample['filename_'+dataset]):
-            fname = sample['filename_'+dataset]
-            sample_time = sample['timestamp_'+dataset]
-            data = dataset
-            file_data = [fname,sample_time,data]
-            file_data.extend(list(sample.loc[sample.index.str.endswith('_'+dataset)])[4:])
-            break
-    
-    # add flare labels for each forecast window
-    for window in flare_windows:
-        flare_data = flares[(flares['peak_time']>=sample_time)&(flares['peak_time']<=sample_time+timedelta(hours=window))]
-        file_data = add_label_data(flare_data,file_data)
-
-    return file_data
 
 def main():
     # parse command line arguments
     parser = parse_args()
-    flare_windows = parser.flare_windows
-    out_filename = parser.out_file
+    flare_catalog = 'Data/hek_flare_catalog.csv'
 
-    # read in index file
-    samples = read_catalog(parser.index_file,na_values=' ')
-
-    # drop samples with the same date, keeping the first entry
-    samples.drop_duplicates(subset='date',keep='first',ignore_index=True,inplace=True)
-
-    # open flare catalog
-    flares = read_catalog('Data/hek_flare_catalog.csv')
-
-    # set start date for dataset as the max forecast window before the first flare in the catalog
-    start_date = int(datetime.strftime(flares['start_time'][0]-timedelta(hours = max(flare_windows)),'%Y%m%d'))
-    # discard samples earlier than the start date
-    samples = samples[samples['date']>=start_date]
-    samples.reset_index(drop=True,inplace=True)
-
-    # open labels file and write header
-    out_file = open(out_filename,'w')
-    out_writer = csv.writer(out_file,delimiter=',')
-    write_header(flare_windows,out_writer,samples.columns)
-
-    # iterate through index and add flare label data
-    for i in samples.index:
-        sample = samples.iloc[i]
-        file_data = generate_file_data(sample,flares,flare_windows)
-        out_writer.writerow(file_data)
-
-    out_file.close()
+    # create labeler instance
+    labeler = Labeler(parser.index_file, parser.out_file,flare_catalog,parser.flare_windows)
+    labeler.write_header()
+    labeler.label_data()
 
 if __name__ == '__main__':
     main()
