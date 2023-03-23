@@ -63,7 +63,7 @@ class Labeler():
         """
         Iterate through index and write flare label data to file
         """
-        out_file = open(self.file,'w')
+        out_file = open(self.file,'a')
         out_writer = csv.writer(out_file,delimiter=',')
 
         for i in self.samples.index:
