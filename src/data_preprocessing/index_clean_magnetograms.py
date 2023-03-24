@@ -7,6 +7,7 @@ extract any metadata from the fits headers.
 import sys,os
 sys.path.append(os.getcwd())
 
+from astropy.convolution import convolve, convolve_fft, Gaussian2DKernel
 from astropy.io import fits
 import astropy.units as u
 import os
@@ -44,7 +45,7 @@ class Indexer:
         self.new_dir = Path(save_dir)/self.data
         if not os.path.exists(self.new_dir):
             os.mkdir(self.new_dir)
-        self.file = index_dir +'/index_'+data+'.csv'
+        self.file = index_dir +'/index_'+data+'smoothed.csv'
         self.metadata_cols = metadata_cols
 
         # header data for csv file
@@ -179,7 +180,15 @@ class Indexer:
         # calibrate MDI
         if self.data == 'MDI':
             img = img/1.3
-        
+            kernel = Gaussian2DKernel(1)
+            img = convolve(img,kernel)
+        elif self.data == 'HMI':
+            kernel = Gaussian2DKernel(4)
+            img = convolve_fft(img,kernel,preserve_nan=True)
+        elif self.data == 'SPMG':
+            kernel = Gaussian2DKernel(4)
+            img = convolve_fft(img,kernel,preserve_nan=True)
+
         # create sunpy map, reproject and calculate total unsigned flux on reprojection
         map = Map(img,header)
         rot_map = scale_rotate(map)
