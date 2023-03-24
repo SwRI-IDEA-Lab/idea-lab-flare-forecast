@@ -139,3 +139,10 @@ src/lightning_logs/*
 lightning_logs/*
 wandb/*
 *.ckpt
+
+# snakemake
+.snakemake/*
+.snakemake*
+
+# handouts
+handouts
