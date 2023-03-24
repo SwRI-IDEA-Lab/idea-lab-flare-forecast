@@ -29,7 +29,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class Indexer:
-    def __init__(self, data:str, data_dir:str='Data', save_dir:str='Data/hdf5', index_dir:str='Data', metadata_cols:list=[]):
+    def __init__(self, data:str, data_dir:str='Data', save_dir:str='Data/hdf5', index_dir:str='Data', metadata_cols:list=[], nworkers:int=4):
         """
         Initialize an indexing class to iterate through data, cleaning and indexing
         
@@ -47,6 +47,7 @@ class Indexer:
             os.mkdir(self.new_dir)
         self.file = index_dir +'/index_'+data+'smoothed.csv'
         self.metadata_cols = metadata_cols
+        self.nworkers = nworkers
 
         # header data for csv file
         header = ['filename','fits_file','timestamp']
@@ -60,7 +61,7 @@ class Indexer:
             out_writer = csv.writer(out_file,delimiter=',')
             out_writer.writerow(header)
     
-    def index_data(self,nworkers:int = 8):
+    def index_data(self):
         """
         Clean and index data in root dir by year. Save index to csv file.
         
@@ -77,7 +78,7 @@ class Indexer:
 
         # index years in parallel and write results to csv
         self.error_files = []
-        with Pool(nworkers) as pool:
+        with Pool(self.nworkers) as pool:
             for result in pool.starmap(self.index_year,args):
                 index = result[0]
                 self.error_files.extend(result[1])
@@ -236,10 +237,15 @@ def parse_args(args=None):
                         help='root directory for fits files'
                         )
     parser.add_argument('-n','--newdir',
-                    type=str,
-                    default='Data/hdf5',
-                    help='directory to save cleaned hdf5 files'
-                    )
+                        type=str,
+                        default='Data/hdf5',
+                        help='directory to save cleaned hdf5 files'
+                        )
+    parser.add_argument('-i','--indexdir',
+                        type=str,
+                        default='Data',
+                        help='directory to save index file'
+                        )
     return parser.parse_args(args)
 
 
@@ -265,19 +271,20 @@ def main():
     datasets = parser.data
     root_dir = parser.root
     new_dir = parser.newdir
+    index_dir = parser.indexdir
 
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     for data in datasets:
         data = data.upper()
-        indexer = Indexer(data,root_dir,new_dir,root_dir,['t_obs'])
-        indexer.index_data(nworkers=8)
+        indexer = Indexer(data,root_dir,new_dir,index_dir,['t_obs'],nworkers=8)
+        indexer.index_data()
 
     if len(datasets)>1:
-        df_merged = merge_indices_by_date(root_dir,datasets)
+        df_merged = merge_indices_by_date(index_dir,datasets)
         filename_merged = '_'.join([data for data in datasets])
-        df_merged.to_csv(root_dir+'/index_'+filename_merged,index=False)
+        df_merged.to_csv(index_dir+'/index_'+filename_merged,index=False)
 
 if __name__ == '__main__':
     main()
