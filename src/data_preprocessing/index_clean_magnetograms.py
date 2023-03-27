@@ -185,7 +185,7 @@ class Indexer:
             img = convolve(img,kernel)
         elif self.data == 'HMI':
             kernel = Gaussian2DKernel(4)
-            img = convolve_fft(img,kernel,preserve_nan=True)
+            img = convolve(img,kernel)
         elif self.data == 'SPMG':
             kernel = Gaussian2DKernel(1.74)
             img = convolve(img,kernel)
