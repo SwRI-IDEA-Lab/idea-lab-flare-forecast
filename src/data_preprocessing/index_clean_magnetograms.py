@@ -192,6 +192,8 @@ class Indexer:
         elif self.data == '512':
             kernel = Gaussian2DKernel(2)
             img = convolve(img,kernel)
+        elif self.data == 'MWO':
+            img = img*2
 
         # create sunpy map, reproject and calculate total unsigned flux on reprojection
         map = Map(img,header)
