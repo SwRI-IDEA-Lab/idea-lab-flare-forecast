@@ -31,7 +31,7 @@ class DataTest(unittest.TestCase):
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.balance_ratio = 1
         self.split_type = 'temporal'
-        self.datamodule = MagnetogramDataModule(self.datafile,self.label,self.balance_ratio, self.split_type)
+        self.datamodule = MagnetogramDataModule(self.datafile,'flare_flux',self.balance_ratio, self.split_type)
 
     def test_datasetExists(self):
         self.assertGreaterEqual(len(self.dataset),0)
@@ -67,6 +67,10 @@ class DataTest(unittest.TestCase):
     def test_datamoduleLoadData(self):
         self.datamodule.prepare_data()
         self.assertIsInstance(self.datamodule.df,pd.DataFrame)
+        self.assertTrue(sum(self.datamodule.df['flare_flux']>1)==0)
+        self.assertLess(sum(self.datamodule.df['flare_flux']),len(self.datamodule.df))
+        self.assertGreater(sum(self.datamodule.df['flare_flux']),0)
+        print(sum(self.datamodule.df['flare_flux']),len(self.datamodule.df['flare_flux']))
 
     def test_datamoduleSetup(self):
         self.datamodule.prepare_data()

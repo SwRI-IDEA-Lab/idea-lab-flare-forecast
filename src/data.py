@@ -1,3 +1,6 @@
+import sys,os
+sys.path.append(os.getcwd())
+
 import torch
 from torchvision import transforms
 import h5py
@@ -6,7 +9,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from torch.utils.data import Dataset,DataLoader
-from utils.transforms import RandomPolaritySwitch
+from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
 class MagnetogramDataSet(Dataset):
@@ -73,7 +76,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
             flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
             flux_thresh (float):    threshold for total unsigned flux to label as positive (default 4e7)
     """
-    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', forecast_window: int = 24, dim: int = 256, batch: int = 32, augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 4e7):
+    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', forecast_window: int = 24, dim: int = 256, batch: int = 32, augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 1.5e7):
         super().__init__()
         self.data_file = data_file
         self.label = label
@@ -117,6 +120,9 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.df['high_flux'] = (self.df['tot_us_flux'] >= self.flux_thresh).astype(int)
         # define flare label based on desired forecast window
         self.df['flare'] = (self.df['flare_intensity_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
+        # define label based on linear relationship between flare intensity and flux
+        self.df['flare_flux'] = ((self.df['flare_intensity_in_'+str(self.forecast_window)+'h']==0) & self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['flare_intensity_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
+        self.df['flare_flux'] = self.df['flare_flux'].astype(int)
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
@@ -152,9 +158,9 @@ class MagnetogramDataModule(pl.LightningDataModule):
         print('Train:',len(self.train_set),
               'Valid:',len(self.val_set),
               'Test:',len(self.test_set))
-        print('Flare/no-flare ratio in training:',sum(df_train['flare']==1),sum(df_train['flare']==0))
-        print('Flare/no-flare ratio in validation:',sum(df_val['flare']==1),sum(df_val['flare']==0))
-        print('Flare/no-flare ratio in test:',sum(df_test['flare']==1),sum(df_test['flare']==0))
+        print('P/N ratio in training:',sum(df_train[self.label]==1),sum(df_train[self.label]==0))
+        print('P/N ratio in validation:',sum(df_val[self.label]==1),sum(df_val[self.label]==0))
+        print('P/N ratio in test:',sum(df_test[self.label]==1),sum(df_test[self.label]==0))
 
     def train_dataloader(self):
         return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4,shuffle=True)
