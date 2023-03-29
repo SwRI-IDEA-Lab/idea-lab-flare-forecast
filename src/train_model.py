@@ -58,7 +58,9 @@ def main():
     early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
 
     # train model
-    trainer = pl.Trainer(deterministic=True,
+    trainer = pl.Trainer(accelerator='gpu',
+                         devices=1,
+                         deterministic=False,
                          max_epochs=epochs,
                         #  log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
