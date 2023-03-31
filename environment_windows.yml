@@ -1,9 +1,15 @@
 name: fforecast
 channels:
+  - pytorch
+  - nvidia
   - conda-forge
   - bioconda
 dependencies:
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=11.8
   - pytorch-lightning=1.9.*
   - sunpy=4.1.*
   - snakemake-minimal
-  - torchvision
+  - wandb
