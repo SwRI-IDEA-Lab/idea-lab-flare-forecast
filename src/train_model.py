@@ -1,4 +1,6 @@
-import os
+import sys,os
+sys.path.append(os.getcwd())
+
 import torch
 from torch import nn
 from torchvision import transforms
@@ -15,7 +17,7 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 import yaml
 
-def main():
+def main():    
     # read in config file
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
@@ -37,6 +39,7 @@ def main():
                                  label=config.data['label'],
                                  balance_ratio=config.data['balance_ratio'],
                                  split_type=config.data['split_type'],
+                                 val_split=config.data['val_split'],
                                  forecast_window=config.data['forecast_window'],
                                  dim=dim,
                                  batch=batch,
@@ -63,10 +66,10 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min')
 
     # train model
-    trainer = pl.Trainer(accelerator='gpu',
+    trainer = pl.Trainer(accelerator='cpu',
                          devices=1,
                          deterministic=False,
                          max_epochs=epochs,
@@ -76,6 +79,8 @@ def main():
                         #  limit_val_batches=5,
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
+
+    wandb.finish()
 
     # evaluate model
 
