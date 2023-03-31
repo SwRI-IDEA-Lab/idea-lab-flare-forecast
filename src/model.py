@@ -139,7 +139,7 @@ class LitConvNet(pl.LightningModule):
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
         y_hat = self.model(x)
-        loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        loss = self.loss(y_hat,y.type_as(y_hat))
         self.train_acc(y_hat,y)
         self.train_f1(y_hat,y)
         self.log_dict({'loss':loss,
@@ -161,7 +161,7 @@ class LitConvNet(pl.LightningModule):
         y = y.view(y.shape[0],-1)
         # forward pass
         y_hat = self.model(x)
-        val_loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
         self.val_acc(y_hat,y)

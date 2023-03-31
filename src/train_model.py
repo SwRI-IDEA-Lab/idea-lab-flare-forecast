@@ -9,6 +9,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
 import pandas as pd
+from pathlib import Path
 import numpy as np
 import wandb
 from pytorch_lightning.loggers import WandbLogger
@@ -19,7 +20,7 @@ def main():
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
     
-    wandb.init(config=config,project=config['meta']['project'])
+    run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
     dim = config.data['dim']
@@ -47,22 +48,31 @@ def main():
     model = convnet_sc(dim=dim,length=1,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
+    # load checkpoint
+    if config.model['load_checkpoint']:
+        print('Loading model checkpoint from ', config.model['checkpoint_location'])
+        artifact = run.use_artifact(config.model['checkpoint_location'],type='model')
+        artifact_dir = artifact.download()
+        classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
     checkpoint_callback = ModelCheckpoint(monitor='val_tss',
                                           mode='max',
-                                          save_top_k=1,
+                                          save_top_k=-1,
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
     early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
 
     # train model
-    trainer = pl.Trainer(deterministic=True,
+    trainer = pl.Trainer(accelerator='gpu',
+                         devices=1,
+                         deterministic=False,
                          max_epochs=epochs,
                         #  log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                        #  limit_train_batches=15,
+                        #  limit_train_batches=10,
                         #  limit_val_batches=5,
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)

@@ -144,7 +144,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
             df_val = df_full.loc[~inds_train,:]
 
         # balance training data
-        if self.balance_ratio != None:
+        if self.balance_ratio > 0:
             df_train = df_train
             inds_train = np.array(df_train[self.label]==1)
             inds_neg = np.where(df_train[self.label]==0)[0]
