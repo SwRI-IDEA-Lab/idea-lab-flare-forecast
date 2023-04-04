@@ -1,20 +1,22 @@
 data:
-  data_file: 'Data/labels_all_smoothed2.csv'
-  forecast_window: 24
-  dim: 128
-  split_type: 'temporal'
-  val_split: 0
-  balance_ratio: 0
-  label: 'flare'
-  flux_thresh: 15000000
-  flare_thresh: 0.00001
   augmentation: None
+  balance_ratio: 0
+  data_file: Data/labels_all_smoothed2.csv
+  dim: 128
+  flare_thresh: 1.0e-05
+  flux_thresh: 9000000
+  forecast_window: 192
+  label: flare
+  split_type: temporal
+  val_split: 4
 meta:
   project: flare-forecast
+  resume: true
+  id: cx3n24vr
 model:
+  checkpoint_location: kierav/flare-forecast/model-wvzf5cyc:v69
   dropout_ratio: 0
-  load_checkpoint: false
-  checkpoint_location: kierav/flare-forecast/model-eiwwrygz:v92
+  load_checkpoint: true
 training:
   batch_size: 256
   epochs: 100

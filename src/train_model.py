@@ -22,7 +22,10 @@ def main():
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
     
-    run = wandb.init(config=config,project=config['meta']['project'])
+    if config['meta']['resume']:
+        run = wandb.init(config=config,project=config['meta']['project'],resume='must',id=config['meta']['id'])
+    else:
+        run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
     dim = config.data['dim']
@@ -52,7 +55,12 @@ def main():
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # load checkpoint
-    if config.model['load_checkpoint']:
+    if wandb.run.resumed:
+        print('Loading model checkpoint from ', 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest')
+        artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',type='model')
+        artifact_dir = artifact.download()
+        classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+    elif config.model['load_checkpoint']:
         print('Loading model checkpoint from ', config.model['checkpoint_location'])
         artifact = run.use_artifact(config.model['checkpoint_location'],type='model')
         artifact_dir = artifact.download()
