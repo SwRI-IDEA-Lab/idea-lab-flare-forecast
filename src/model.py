@@ -214,7 +214,8 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'test_acc':self.test_acc,
                        'test_aps':self.test_aps,
                        'test_f1':self.test_f1,
-                       'test_bss':self.test_bss})
+                       'test_bss':self.test_bss},
+                       on_step=False,on_epoch=True)
 
     def test_epoch_end(self,outputs):
         confusion_matrix = self.test_confusion_matrix.compute()

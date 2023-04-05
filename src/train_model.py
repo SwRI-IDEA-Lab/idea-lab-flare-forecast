@@ -70,7 +70,7 @@ def main():
     wandb_logger = WandbLogger(log_model='all')
     checkpoint_callback = ModelCheckpoint(monitor='val_tss',
                                           mode='max',
-                                          save_top_k=-1,
+                                          save_top_k=1,
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
