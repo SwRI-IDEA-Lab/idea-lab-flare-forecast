@@ -39,7 +39,7 @@ def main():
                                  label=config.data['label'],
                                  balance_ratio=config.data['balance_ratio'],
                                  split_type=config.data['split_type'],
-                                 val_split=config.data['val_split'],
+                                 val_split=0,
                                  forecast_window=config.data['forecast_window'],
                                  dim=dim,
                                  batch=batch,
@@ -52,8 +52,8 @@ def main():
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # load checkpoint
-    print('Loading model checkpoint from ', 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':best_k')
-    artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+config.meta['id']+':best_k',type='model')
+    print('Loading model checkpoint from ', 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k')
+    artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+run.id+':best_k',type='model')
     artifact_dir = artifact.download()
     classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
     
@@ -61,11 +61,12 @@ def main():
     wandb_logger = WandbLogger(log_model='all')
 
     # evaluate model
-    trainer = pl.Trainer(accelerator='cpu',
+    trainer = pl.Trainer(accelerator='gpu',
                          devices=1,
                          deterministic=False,
                          logger=wandb_logger)
-    
+    data.prepare_data()
+    data.setup('test')
     trainer.test(model=classifier,dataloaders=data.pseudotest_dataloader())
 
     wandb.finish()
