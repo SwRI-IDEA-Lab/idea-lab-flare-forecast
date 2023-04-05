@@ -39,7 +39,7 @@ def main():
                                  label=config.data['label'],
                                  balance_ratio=config.data['balance_ratio'],
                                  split_type=config.data['split_type'],
-                                 val_split=0,
+                                 val_split=config.data['val_split'],
                                  forecast_window=config.data['forecast_window'],
                                  dim=dim,
                                  batch=batch,
@@ -65,6 +65,7 @@ def main():
                          devices=1,
                          deterministic=False,
                          logger=wandb_logger)
+    
     data.prepare_data()
     data.setup('test')
     trainer.test(model=classifier,dataloaders=data.pseudotest_dataloader())
