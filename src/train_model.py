@@ -17,13 +17,30 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 import yaml
 
+def load_model(run,ckpt_path,model):
+    """
+    Load model into wandb run by downloading and initializing weights
+
+    Parameters:
+        run:        wandb run object
+        ckpt_path:  wandb path to download model checkpoint from
+        model:      model class
+    Returns:
+        classifier: LitConvNet object with loaded weights
+    """
+    print('Loading model checkpoint from ', ckpt_path)
+    artifact = run.use_artifact(ckpt_path,type='model')
+    artifact_dir = artifact.download()
+    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+    return classifier
+
 def main():    
     # read in config file
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
     
     if config['meta']['resume']:
-        run = wandb.init(config=config,project=config['meta']['project'],resume='must',id=config['meta']['id'])
+        run = wandb.init(project=config['meta']['project'],resume='must',id=config['meta']['id'])
     else:
         run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
@@ -56,15 +73,9 @@ def main():
 
     # load checkpoint
     if wandb.run.resumed:
-        print('Loading model checkpoint from ', 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest')
-        artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',type='model')
-        artifact_dir = artifact.download()
-        classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',model)
     elif config.model['load_checkpoint']:
-        print('Loading model checkpoint from ', config.model['checkpoint_location'])
-        artifact = run.use_artifact(config.model['checkpoint_location'],type='model')
-        artifact_dir = artifact.download()
-        classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+        classifier = load_model(run, config.model['checkpoint_location'], model)
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
@@ -77,7 +88,7 @@ def main():
     early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min')
 
     # train model
-    trainer = pl.Trainer(accelerator='cpu',
+    trainer = pl.Trainer(accelerator='gpu',
                          devices=1,
                          deterministic=False,
                          max_epochs=epochs,
@@ -90,6 +101,10 @@ def main():
 
     # test trained model
     if config.testing['eval']:
+        # load best checkpoint
+        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
+    
+        # run test to log metrics to wandb
         trainer.test(model=classifier,dataloaders=data.pseudotest_dataloader())
 
         # save predictions locally
