@@ -45,12 +45,6 @@ def main():
         run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
-    dim = config.data['dim']
-    lr = config.training['lr']
-    wd = config.training['wd']
-    batch = config.training['batch_size']
-    epochs = config.training['epochs']
-
     # set seeds
     pl.seed_everything(42,workers=True)
 
@@ -61,15 +55,15 @@ def main():
                                  split_type=config.data['split_type'],
                                  val_split=config.data['val_split'],
                                  forecast_window=config.data['forecast_window'],
-                                 dim=dim,
-                                 batch=batch,
+                                 dim=config.data['dim'],
+                                 batch=config.training['batch_size'],
                                  augmentation=config.data['augmentation'],
                                  flare_thresh=config.data['flare_thresh'],
                                  flux_thresh=config.data['flux_thresh'])
 
     # define model
-    model = convnet_sc(dim=dim,length=1,dropoutRatio=config.model['dropout_ratio'])
-    classifier = LitConvNet(model,lr,wd,epochs=epochs)
+    model = convnet_sc(dim=config.data['dim'],length=1,dropoutRatio=config.model['dropout_ratio'])
+    classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
 
     # load checkpoint
     if wandb.run.resumed:
@@ -91,13 +85,38 @@ def main():
     trainer = pl.Trainer(accelerator='gpu',
                          devices=1,
                          deterministic=False,
-                         max_epochs=epochs,
+                         max_epochs=config.training['epochs'],
                         #  log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
                         #  limit_train_batches=10,
                         #  limit_val_batches=5,
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
+
+    # load pretrained model and retrain
+    if config.training['pretrain']:
+        # define new data module
+        data2 = MagnetogramDataModule(data_file=config.data['data_file'],
+                                    label='flare',
+                                    balance_ratio=config.data['balance_ratio'],
+                                    split_type=config.data['split_type'],
+                                    val_split=config.data['val_split'],
+                                    forecast_window=config.data['forecast_window'],
+                                    dim=config.data['dim'],
+                                    batch=config.training['batch_size'],
+                                    augmentation=config.data['augmentation'],
+                                    flare_thresh=config.data['flare_thresh'],
+                                    flux_thresh=config.data['flux_thresh'])
+        # load best checkpoint
+        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
+        # train model with new trainer instance 
+        trainer = pl.Trainer(accelerator='gpu',
+                            devices=1,
+                            deterministic=False,
+                            max_epochs=config.training['epochs'],
+                            callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
+                            logger=wandb_logger)
+        trainer.fit(model=classifier,datamodule=data2)
 
     # test trained model
     if config.testing['eval']:
