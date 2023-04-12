@@ -40,7 +40,7 @@ def main():
         config = yaml.safe_load(config_file.read())
     
     if config['meta']['resume']:
-        run = wandb.init(project=config['meta']['project'],resume='must',id=config['meta']['id'])
+        run = wandb.init(config=config,project=config['meta']['project'],resume='must',id=config['meta']['id'])
     else:
         run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
@@ -82,7 +82,7 @@ def main():
     early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min')
 
     # train model
-    trainer = pl.Trainer(accelerator='gpu',
+    trainer = pl.Trainer(accelerator='cpu',
                          devices=1,
                          deterministic=False,
                          max_epochs=config.training['epochs'],
