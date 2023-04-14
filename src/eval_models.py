@@ -10,6 +10,9 @@ run_ids = ['0yp1u3u7','rqjod26l','ccibb0m3','l43yawpd','kb7e4vjm',  # trained fr
 run_ids = ['rpbdaar7','7rly07du','dvbv95z9','1qun5v4m','5yjfaisu', # trained from scratch
            'on2nqevh','bf031zcs','dczvlcbk','mmi8972m','y7afx68p', # pre-trained on high flux
            'd8smbbgj','jz02x97l','3xpiyftj','16cgp7dm','zrnoue78'] # pre-trained on flare-flux
+# Run IDs for gating on 192 h
+run_ids = ['sy7z0o3u','ti0z3try','8kntgxyp','q7gp8js4','0at1qp1f', # 72 hr
+           '2x7ie8b3','9r32ir8c','z12k2weh','yew48cj2','ajqi853m']
 
 with open('experiment_config.yml') as config_file:
     config = yaml.safe_load(config_file.read())
