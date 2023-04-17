@@ -140,6 +140,7 @@ src/lightning_logs/*
 lightning_logs/*
 wandb/*
 *.ckpt
+*.ods
 
 # snakemake
 .snakemake/*
