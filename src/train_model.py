@@ -93,31 +93,6 @@ def main():
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
 
-    # load pretrained model and retrain
-    if config.training['pretrain']:
-        # define new data module
-        data2 = MagnetogramDataModule(data_file=config.data['data_file'],
-                                    label='flare',
-                                    balance_ratio=config.data['balance_ratio'],
-                                    split_type=config.data['split_type'],
-                                    val_split=config.data['val_split'],
-                                    forecast_window=config.data['forecast_window'],
-                                    dim=config.data['dim'],
-                                    batch=config.training['batch_size'],
-                                    augmentation=config.data['augmentation'],
-                                    flare_thresh=config.data['flare_thresh'],
-                                    flux_thresh=config.data['flux_thresh'])
-        # load best checkpoint
-        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
-        # train model with new trainer instance 
-        trainer = pl.Trainer(accelerator='gpu',
-                            devices=1,
-                            deterministic=False,
-                            max_epochs=config.training['epochs'],
-                            callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                            logger=wandb_logger)
-        trainer.fit(model=classifier,datamodule=data2)
-
     # test trained model
     if config.testing['eval']:
         # load best checkpoint
