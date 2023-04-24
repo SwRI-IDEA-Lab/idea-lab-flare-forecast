@@ -12,6 +12,28 @@ from torch.utils.data import Dataset,DataLoader
 from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
+def split_data(df,val_split):
+
+    # hold out test set
+    inds_test_a = (df['sample_time']>=datetime(2016,1,1))&(df['sample_time']<datetime(2018,1,1)) 
+    inds_test_b = (df['sample_time'].dt.month >= 11)
+    inds_test = inds_test_a | inds_test_b
+    df_test = df.loc[inds_test,:]
+    df_full = df.loc[~inds_test,:]
+    # print('Bounds of test set:',df_test['sample_time'].min(),df_test['sample_time'].max())
+    # print('Bounds of training set:',df_full['sample_time'].min(),df_full['sample_time'].max())
+    
+    # perform splitting of training and validation set
+    inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
+    df_pseudotest = df_full.loc[inds_pseudotest,:]
+    df_train = df_full.loc[~inds_pseudotest,:]
+    df_train = df_train.reset_index(drop=True)
+    n_val = int(np.floor(len(df_train)/5))
+    df_val = df_train.iloc[val_split*n_val:(val_split+1)*n_val,:]
+    df_train = df_train.drop(df_val.index)
+
+    return df_test,df_pseudotest,df_train,df_val
+
 class MagnetogramDataSet(Dataset):
     """
         Pytorch dataset for handling magnetogram data 
@@ -127,28 +149,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
-
-        # hold out test set
-        inds_test_a = (self.df['sample_time']>=datetime(2016,1,1))&(self.df['sample_time']<datetime(2018,1,1)) 
-        inds_test_b = (self.df['sample_time'].dt.month >= 11)
-        inds_test = inds_test_a | inds_test_b
-        df_test = self.df.loc[inds_test,:]
-        df_full = self.df.loc[~inds_test,:]
-        print('Bounds of test set:',df_test['sample_time'].min(),df_test['sample_time'].max())
-        print('Bounds of training set:',df_full['sample_time'].min(),df_full['sample_time'].max())
-        
-        # perform splitting of training and validation set
-        if self.split_type == 'random':
-            df_train = df_full.sample(frac=0.7,random_state=42)
-            df_val = df_full.drop(df_train.index)
-        elif self.split_type == 'temporal':
-            inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
-            df_pseudotest = df_full.loc[inds_pseudotest,:]
-            df_train = df_full.loc[~inds_pseudotest,:]
-            df_train = df_train.reset_index(drop=True)
-            n_val = int(np.floor(len(df_train)/5))
-            df_val = df_train.iloc[self.val_split*n_val:(self.val_split+1)*n_val,:]
-            df_train = df_train.drop(df_val.index)
+        df_test,df_pseudotest,df_train,df_val = split_data(self.df,self.val_split)
 
         # balance training data
         if self.balance_ratio > 0:

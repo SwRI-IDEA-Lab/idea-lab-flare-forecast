@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.calibration import CalibrationDisplay
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler,MaxAbsScaler
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import average_precision_score,roc_auc_score
 from src.data import split_data
 from datetime import datetime, timedelta
 import numpy as np
@@ -46,8 +46,6 @@ class LinearModel():
 
     def test(self,X,y):
         ypred = self.model.predict_proba(X)
-        print('BSS:',(sum((ypred[:,1]-y)**2))/len(ypred),
-            'APS:',average_precision_score(y,ypred[:,1]))
         return ypred[:,1]
         
 
@@ -62,3 +60,8 @@ if __name__ == "__main__":
         model.setup()
         model.train()
         ypred = model.test(model.X_pseudotest,model.df_pseudotest['flare'])
+        y = model.df_pseudotest['flare']
+        print('MSE:',(sum((ypred-y)**2))/len(ypred),
+            'BSS:',(sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2)),
+            'APS:',average_precision_score(y,ypred),
+            'Gini:',2*roc_auc_score(y,ypred)-1)
