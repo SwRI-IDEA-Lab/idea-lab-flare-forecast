@@ -84,6 +84,19 @@ def main():
     df.to_csv(wandb.run.dir+'/pseudotest_results.csv',index=False)
     wandb.save('pseudotest_results.csv')
 
+    preds = trainer.predict(model=classifier,dataloaders=data.predict_dataloader())
+
+    file = []
+    ytrue = []
+    ypred = []
+    for predbatch in preds:
+        file.extend(predbatch[0])
+        ytrue.extend(np.array(predbatch[1]).flatten())
+        ypred.extend(np.array(predbatch[2]).flatten())
+    df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
+    df.to_csv(wandb.run.dir+'/pseudotest_results.csv',index=False)
+    wandb.save('trainval_results.csv')
+
     wandb.finish()
 
 if __name__ == "__main__":
