@@ -56,19 +56,15 @@ def main():
     artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+run.id+':best_k',type='model')
     artifact_dir = artifact.download()
     classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
-    
-    # initialize wandb logger
-    wandb_logger = WandbLogger(log_model='all')
 
     # evaluate model
     trainer = pl.Trainer(accelerator='cpu',
                          devices=1,
                          deterministic=False,
-                         logger=wandb_logger)
+                         logger=False)
     
     data.prepare_data()
     data.setup('test')
-    trainer.test(model=classifier,dataloaders=data.pseudotest_dataloader())
 
     # save predictions locally
     preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
@@ -94,7 +90,7 @@ def main():
         ytrue.extend(np.array(predbatch[1]).flatten())
         ypred.extend(np.array(predbatch[2]).flatten())
     df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
-    df.to_csv(wandb.run.dir+'/pseudotest_results.csv',index=False)
+    df.to_csv(wandb.run.dir+'/trainval_results.csv',index=False)
     wandb.save('trainval_results.csv')
 
     wandb.finish()
