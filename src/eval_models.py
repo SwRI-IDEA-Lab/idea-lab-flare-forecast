@@ -16,6 +16,8 @@ run_ids = ['rjvw2ggx','hivlfts5','8pu2kzdv','99wd6zrf','rn9ftb8q', # trained fro
 run_ids = ['gk1e9e4l','n4zom9nt','oi1ap1tw','5zaxap08','vu25244h', # trained from scratch
            '2jrv604y','0bwto5fv','lucqcvyy','u6xb8dq7','syxz8cmj', # pre-trained on high flux
            '6gpu3hyc','dpqp4qre','vzakjqyw','b1ow03l2','x0d8ar92'] # pre-trained on flare-flux
+# 24 h pretrained on high flux and conservative augmentation
+run_ids = ['uyo4qwyp','qazuyg25','7yiwewej','7ns308th','avh2pkc1']
 # # Run IDs for gating on 192 h
 # run_ids = ['sy7z0o3u','ti0z3try','8kntgxyp','q7gp8js4','0at1qp1f', # 72 hr
 #            '2x7ie8b3','9r32ir8c','z12k2weh','yew48cj2','ajqi853m']
