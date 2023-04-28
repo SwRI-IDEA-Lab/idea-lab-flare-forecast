@@ -256,3 +256,4 @@ class LitConvNet(pl.LightningModule):
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
         return fname, y, self.model(x)
+        return fname, self.model(x), y

@@ -73,13 +73,13 @@ def main():
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
-    checkpoint_callback = ModelCheckpoint(monitor='val_tss',
-                                          mode='max',
+    checkpoint_callback = ModelCheckpoint(monitor='val_loss',
+                                          mode='min',
                                           save_top_k=1,
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min')
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
 
     # train model
     trainer = pl.Trainer(accelerator='cpu',
