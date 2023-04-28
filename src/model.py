@@ -249,9 +249,10 @@ class LitConvNet(pl.LightningModule):
                 dataloader_idx
 
             Returns:
-                y_pred (tensor): model outputs for the batch
+                fname (tensor):  file names for samples
                 y_true (tensor): true labels for the batch
+                y_pred (tensor): model outputs for the batch
         """
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
-        return fname, self.model(x), y
+        return fname, y, self.model(x)

@@ -162,6 +162,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
 
         self.train_set = MagnetogramDataSet(df_train,self.label,self.training_transform)
         self.val_set = MagnetogramDataSet(df_val,self.label,self.transform)
+        self.trainval_set = MagnetogramDataSet(pd.concat([df_train,df_val]),self.label,self.transform)
         self.pseudotest_set = MagnetogramDataSet(df_pseudotest,self.label,self.transform)
         self.test_set = MagnetogramDataSet(df_test,self.label,self.transform)
         print('Train:',len(self.train_set),
@@ -186,7 +187,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
 
     def predict_dataloader(self):
-        return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
+        return DataLoader(self.trainval_set,batch_size=self.batch_size,num_workers=4)
 
 
 

@@ -38,9 +38,9 @@ class LightningModuleTest(unittest.TestCase):
         batch = next(iter(self.train_loader))
         batch_idx = 0
         pred = self.litmodel.predict_step(batch,batch_idx)
-        self.assertEqual(len(pred),2)
-        self.assertTrue(torch.is_tensor(pred[0]))
+        self.assertEqual(len(pred),3)
         self.assertTrue(torch.is_tensor(pred[1]))
+        self.assertTrue(torch.is_tensor(pred[2]))
 
 if __name__ == "__main__":
     unittest.main()
