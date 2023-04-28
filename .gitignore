@@ -149,3 +149,6 @@ wandb/*
 # handouts
 handouts
 notebooks/*.ipynb
+
+# eval scripts
+src/eval_models.py
