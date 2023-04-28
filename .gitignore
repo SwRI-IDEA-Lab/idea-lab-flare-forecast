@@ -133,6 +133,7 @@ dmypy.json
 *.png
 *.csv
 *.fits
+*.ods
 
 # log files
 src/lightning_logs/*
@@ -147,4 +148,4 @@ wandb/*
 
 # handouts
 handouts
-*.ipynb
+notebooks/*.ipynb
