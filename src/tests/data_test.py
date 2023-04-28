@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 class DataTest(unittest.TestCase):
 
     def setUp(self):
-        self.datafile = 'Data/labels_MDI.csv'
+        self.datafile = 'Data/labels_all_smoothed2.csv'
         self.df = pd.read_csv(self.datafile)
         self.label = 'flare'
         self.df['flare'] = (self.df['flare_intensity_in_24h']>=1e-5).astype(int)

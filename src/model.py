@@ -23,7 +23,7 @@ class convnet_sc(nn.Module):
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block2 = nn.Sequential(
-            nn.Conv2d(32, 32, (3,3),padding='valid'),
+            nn.Conv2d(32, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
@@ -35,14 +35,14 @@ class convnet_sc(nn.Module):
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block4 = nn.Sequential(
-            nn.ZeroPad2d((2,2)),
-            nn.Conv2d(64, 128, (3,3),padding='valid'),
+            # nn.ZeroPad2d((2,2)),
+            nn.Conv2d(64, 128, (3,3),padding='same'),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block5 = nn.Sequential(
-            nn.Conv2d(128, 256, (3,3),padding='valid'),
+            nn.Conv2d(128, 256, (3,3),padding='same'),
             nn.ReLU(inplace=True),
         )
 
@@ -72,12 +72,12 @@ class convnet_sc(nn.Module):
 
         if isinstance(module,nn.Linear):
             # nn.init.zeros_(module.weight)
-            nn.init.normal_(module.weight)
+            nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
         if isinstance(module,nn.LazyLinear):
             # nn.init.zeros_(module.weight)
-            nn.init.normal_(module.weight)
+            nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
     def forward(self,x):
@@ -214,7 +214,8 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'test_acc':self.test_acc,
                        'test_aps':self.test_aps,
                        'test_f1':self.test_f1,
-                       'test_bss':self.test_bss})
+                       'test_bss':self.test_bss},
+                       on_step=False,on_epoch=True)
 
     def test_epoch_end(self,outputs):
         confusion_matrix = self.test_confusion_matrix.compute()
@@ -253,4 +254,4 @@ class LitConvNet(pl.LightningModule):
         """
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
-        return self.model(x), y
+        return fname, self.model(x), y

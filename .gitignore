@@ -139,6 +139,7 @@ src/lightning_logs/*
 lightning_logs/*
 wandb/*
 *.ckpt
+*.ods
 
 # snakemake
 .snakemake/*
@@ -146,3 +147,4 @@ wandb/*
 
 # handouts
 handouts
+*.ipynb
