@@ -1,7 +1,7 @@
 import sys,os
 sys.path.append(os.getcwd())
 import unittest
-from src.model import convnet_sc
+from src.model import convnet_sc, LitConvNet
 import numpy as np
 import torch
 import h5py
@@ -18,6 +18,7 @@ class ModelTest(unittest.TestCase):
         self.x[torch.isnan(self.x)]=0
         self.dim = self.x.shape[-1]
         self.model = convnet_sc(dim=self.dim)
+        print(self.model)
 
     def test_modelexists(self):
         self.assertIsNotNone(self.model)
@@ -42,6 +43,10 @@ class ModelTest(unittest.TestCase):
                 print(name, layer)        
                 print(layer.weight)
                 print(layer.bias)
+    
+    def test_loadCheckpoint(self):
+        classifier = LitConvNet.load_from_checkpoint('artifacts/model-zrnoue78:v1/model.ckpt',model=self.model,strict=False)
+
 
 
 if __name__ == "__main__":
