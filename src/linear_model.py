@@ -15,7 +15,7 @@ class LinearModel():
     """
         Logistic regression model for flare forecasting
     """
-    def __init__(self,data_file:str,window:int,val_split:int=0,flare_thresh:float=1e-5):
+    def __init__(self,data_file:str,window:int,val_split:int=0,flare_thresh:float=1e-5,class_weight=None):
         self.data_file = data_file
         self.window = window
         self.flare_thresh = flare_thresh
@@ -23,7 +23,7 @@ class LinearModel():
         self.scaler = MaxAbsScaler()
         self.features = ['tot_us_flux']
         self.label = 'flare'
-        self.model = LogisticRegression(class_weight='balanced',random_state=val_split)
+        self.model = LogisticRegression(class_weight=class_weight,random_state=val_split)
 
     def prepare_data(self):
         # load and prep dataframe
