@@ -17,7 +17,7 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 import yaml
 
-def load_model(run,ckpt_path,model):
+def load_model(run,ckpt_path,model,strict=True):
     """
     Load model into wandb run by downloading and initializing weights
 
@@ -31,7 +31,7 @@ def load_model(run,ckpt_path,model):
     print('Loading model checkpoint from ', ckpt_path)
     artifact = run.use_artifact(ckpt_path,type='model')
     artifact_dir = artifact.download()
-    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
     return classifier
 
 def main():    
@@ -69,7 +69,7 @@ def main():
     if wandb.run.resumed:
         classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',model)
     elif config.model['load_checkpoint']:
-        classifier = load_model(run, config.model['checkpoint_location'], model)
+        classifier = load_model(run, config.model['checkpoint_location'], model, strict=False)
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
