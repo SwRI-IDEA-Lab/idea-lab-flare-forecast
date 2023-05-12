@@ -52,6 +52,26 @@ def add_label_data(flare_data):
         file_data.append(0)
     return file_data
 
+def calculate_flaring_rate(flare_data,window):
+    """
+    Calculate the rate of flaring over the number of days covered by flare_data
+
+    Parameters: 
+        flare_data (dataframe):    catalog of relevant flares 
+        window (int):              number of days to calculate flaring rate over
+    
+    Returns: 
+        flare_rate (float):        rate of flaring over window
+    """
+    # filter only M flares
+    flare_data = flare_data[flare_data['intensity']>=1e-5]
+    # filter unique days
+    peak_days = flare_data['peak_time'].dt.date
+    unique_days = pd.unique(peak_days)
+    # calculate flaring rate
+    flare_rate = len(unique_days)/window
+    return flare_rate
+
 def extract_date_time(file,data,year):
     """
     Extracts date and time from a magnetogram fits filename. 
