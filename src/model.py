@@ -14,7 +14,7 @@ class convnet_sc(nn.Module):
         dropoutRatio (float):   percentage of disconnections for Dropout
 
     """
-    def __init__(self, dim:int=256, length:int=1, dropoutRatio:float=0.0):
+    def __init__(self, dim:int=256, length:int=1, len_features:int=0, dropoutRatio:float=0.0):
         super().__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
@@ -46,15 +46,18 @@ class convnet_sc(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.fcl = nn.Sequential(
+        self.fcl1 = nn.Sequential(
             nn.LazyLinear(100),
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
-            nn.Linear(100,1),
+        )
+        
+        self.fcl2 = nn.Sequential(
+            nn.Linear(100+len_features,1),
             nn.Sigmoid()
         )
         
-        self.forward(torch.ones(1,1,dim,dim))
+        self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
         
 
@@ -80,7 +83,7 @@ class convnet_sc(nn.Module):
             nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
-    def forward(self,x):
+    def forward(self,x,f):
         
         x = self.block1(x)
         x = self.block2(x)
@@ -88,7 +91,11 @@ class convnet_sc(nn.Module):
         x = self.block4(x)
         x = self.block5(x)
         x = x.view(x.shape[0],-1)
-        x = self.fcl(x)
+        x = self.fcl1(x)
+
+        # append features
+        x = torch.cat([x,f],dim=1)
+        x = self.fcl2(x)
         return x
 
 class LitConvNet(pl.LightningModule):
@@ -138,7 +145,7 @@ class LitConvNet(pl.LightningModule):
         """
         fname, x, f, y = batch
         y = y.view(y.shape[0])
-        y_hat = self.model(x)
+        y_hat = self.model(x,f)
         loss = self.loss(y_hat,y.type_as(y_hat))
         self.train_acc(y_hat,y)
         self.train_f1(y_hat,y)
@@ -160,7 +167,7 @@ class LitConvNet(pl.LightningModule):
         fname, x, f, y = batch
         y = y.view(y.shape[0])
         # forward pass
-        y_hat = self.model(x)
+        y_hat = self.model(x,f)
         val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
@@ -202,7 +209,7 @@ class LitConvNet(pl.LightningModule):
         fname, x, f, y = batch
         y = y.view(y.shape[0])
         # forward pass
-        y_hat = self.model(x)
+        y_hat = self.model(x,f)
 
         # calculate metrics
         self.test_acc(y_hat,y)
@@ -255,7 +262,7 @@ class LitConvNet(pl.LightningModule):
         """
         fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
-        return fname, y, self.model(x)
+        return fname, y, self.model(x,f)
     
     def on_load_checkpoint(self, checkpoint: dict) -> None:
         state_dict = checkpoint["state_dict"]
