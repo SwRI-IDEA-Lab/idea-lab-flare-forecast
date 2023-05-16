@@ -9,6 +9,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from torch.utils.data import Dataset,DataLoader
+from sklearn.preprocessing import MaxAbsScaler
 from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
@@ -21,11 +22,12 @@ class MagnetogramDataSet(Dataset):
             label (str):        Name of column with label data
             transform:          torchvision transform to apply to data (default is ToTensor())
     """
-    def __init__(self,df,label: str ='flare',transform=transforms.ToTensor()):
+    def __init__(self,df,label: str ='flare',transform=transforms.ToTensor(),feature_cols=[]):
         self.name_frame = df.loc[:,'filename']
         self.label_frame = df.loc[:,label]
         self.dataset_frame = df.loc[:,'dataset']
         self.transform = transform
+        self.features = df.loc[:,feature_cols]
 
     def __len__(self):
         return len(self.name_frame)
@@ -44,6 +46,7 @@ class MagnetogramDataSet(Dataset):
         img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
         img = np.nan_to_num(img)
         label = self.label_frame.iloc[idx]
+        features = torch.Tensor(self.features.iloc[idx])
 
         # Normalize magnetogram data
         # clip magnetogram data within max value
@@ -56,7 +59,7 @@ class MagnetogramDataSet(Dataset):
         # transform image
         img = self.transform(img)
 
-        return [filename,img,label]
+        return [filename,img,features,label]
     
 
 class MagnetogramDataModule(pl.LightningDataModule):
@@ -76,7 +79,10 @@ class MagnetogramDataModule(pl.LightningDataModule):
             flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
             flux_thresh (float):    threshold for total unsigned flux to label as positive (default 4e7)
     """
-    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 1.5e7):
+    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', 
+                 val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
+                 augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 1.5e7,
+                 feature_cols=['tot_us_flux']):
         super().__init__()
         self.data_file = data_file
         self.label = label
@@ -87,6 +93,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.val_split = val_split
         self.balance_ratio = balance_ratio
         self.batch_size = batch
+        self.feature_cols = feature_cols
 
         # define data transforms
         self.transform = transforms.Compose([
@@ -159,11 +166,19 @@ class MagnetogramDataModule(pl.LightningDataModule):
             inds_train[inds_neg[:self.balance_ratio*np.sum(inds_train)]] = 1
             df_train = df_train.iloc[inds_train,:]
 
-        self.train_set = MagnetogramDataSet(df_train,self.label,self.training_transform)
-        self.val_set = MagnetogramDataSet(df_val,self.label,self.transform)
-        self.trainval_set = MagnetogramDataSet(pd.concat([df_train,df_val]),self.label,self.transform)
-        self.pseudotest_set = MagnetogramDataSet(df_pseudotest,self.label,self.transform)
-        self.test_set = MagnetogramDataSet(df_test,self.label,self.transform)
+        # scale input features
+        self.scaler = MaxAbsScaler()
+        self.scaler.fit(df_train.loc[:,self.feature_cols])
+        df_train.loc[:,self.feature_cols] = self.scaler.transform(df_train.loc[:,self.feature_cols])
+        df_val.loc[:,self.feature_cols] = self.scaler.transform(df_val.loc[:,self.feature_cols])
+        df_pseudotest.loc[:,self.feature_cols] = self.scaler.transform(df_pseudotest.loc[:,self.feature_cols])
+        df_test.loc[:,self.feature_cols] = self.scaler.transform(df_test.loc[:,self.feature_cols])
+
+        self.train_set = MagnetogramDataSet(df_train,self.label,self.training_transform,self.feature_cols)
+        self.val_set = MagnetogramDataSet(df_val,self.label,self.transform,self.feature_cols)
+        self.trainval_set = MagnetogramDataSet(pd.concat([df_train,df_val]),self.label,self.transform,self.feature_cols)
+        self.pseudotest_set = MagnetogramDataSet(df_pseudotest,self.label,self.transform,self.feature_cols)
+        self.test_set = MagnetogramDataSet(df_test,self.label,self.transform,self.feature_cols)
         print('Train:',len(self.train_set),
               'Valid:',len(self.val_set),
               'Pseudo-test:',len(self.pseudotest_set),

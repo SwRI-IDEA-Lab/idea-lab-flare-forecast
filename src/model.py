@@ -136,8 +136,8 @@ class LitConvNet(pl.LightningModule):
             Returns:
                 loss (torch tensor):    loss evaluated on batch
         """
-        fname, x, y = batch
-        y = y.view(y.shape[0],-1)
+        fname, x, f, y = batch
+        y = y.view(y.shape[0])
         y_hat = self.model(x)
         loss = self.loss(y_hat,y.type_as(y_hat))
         self.train_acc(y_hat,y)
@@ -157,8 +157,8 @@ class LitConvNet(pl.LightningModule):
                 batch:                  batch from a DataLoader
                 batch_idx:              index of batch                  
         """
-        fname, x, y = batch
-        y = y.view(y.shape[0],-1)
+        fname, x, f, y = batch
+        y = y.view(y.shape[0])
         # forward pass
         y_hat = self.model(x)
         val_loss = self.loss(y_hat,y.type_as(y_hat))
@@ -199,8 +199,8 @@ class LitConvNet(pl.LightningModule):
                 batch:                  batch from a DataLoader
                 batch_idx:              index of batch                  
         """
-        fname, x, y = batch
-        y = y.view(y.shape[0],-1)
+        fname, x, f, y = batch
+        y = y.view(y.shape[0])
         # forward pass
         y_hat = self.model(x)
 
@@ -253,7 +253,7 @@ class LitConvNet(pl.LightningModule):
                 y_true (tensor): true labels for the batch
                 y_pred (tensor): model outputs for the batch
         """
-        fname, x, y = batch
+        fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
         return fname, y, self.model(x)
     

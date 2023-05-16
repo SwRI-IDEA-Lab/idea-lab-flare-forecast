@@ -8,9 +8,9 @@ data:
   forecast_window: 72
   label: flare
   split_type: temporal
-  val_split: 2
+  val_split: 4
 meta:
-  id: None
+  id: 3w7p5g3z
   project: flare-forecast
   resume: false
 model:
