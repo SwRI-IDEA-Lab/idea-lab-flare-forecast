@@ -1,27 +1,29 @@
 data:
-  augmentation: None
+  augmentation: conservative
   balance_ratio: 0
-  data_file: Data/labels_all_smoothed_192hreduced_model2.csv
+  data_file: Data/labels_all_smoothed.csv
   dim: 128
+  feature_cols:
+  - tot_us_flux
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
-  forecast_window: 72
+  forecast_window: 24
   label: flare
   split_type: temporal
-  val_split: 4
+  val_split: 0
 meta:
-  id: 3w7p5g3z
+  id: i5az5pge
   project: flare-forecast
   resume: false
 model:
-  checkpoint_location: kierav/flare-forecast/model-3w1nceco:best_k
+  checkpoint_location: None
   dropout_ratio: 0
-  load_checkpoint: true
+  load_checkpoint: false
 testing:
   eval: false
 training:
   batch_size: 256
   epochs: 100
   lr: 0.0001
-  wd: 0.001
   pretrain: false
+  wd: 0.001
