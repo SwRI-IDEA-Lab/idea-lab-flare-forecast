@@ -45,10 +45,11 @@ def main():
                                  batch=batch,
                                  augmentation=config.data['augmentation'],
                                  flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'])
+                                 flux_thresh=config.data['flux_thresh'],
+                                 feature_cols=config.data['feature_cols'])
 
     # define model
-    model = convnet_sc(dim=dim,length=1,dropoutRatio=config.model['dropout_ratio'])
+    model = convnet_sc(dim=dim,length=1,len_features=len(config.data['feature_cols']),dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # load checkpoint
@@ -56,6 +57,13 @@ def main():
     artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+run.id+':best_k',type='model')
     artifact_dir = artifact.download()
     classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+
+
+    for name, layer in model.named_modules():
+        if isinstance(layer, torch.nn.Linear):
+            print(name, layer)        
+            print(layer.weight)
+            print(layer.bias)
 
     # evaluate model
     trainer = pl.Trainer(accelerator='cpu',

@@ -48,6 +48,9 @@ def main():
     # set seeds
     pl.seed_everything(42,workers=True)
 
+    #
+    print('Features:',config.data['feature_cols'])
+
     # define data module
     data = MagnetogramDataModule(data_file=config.data['data_file'],
                                  label=config.data['label'],
@@ -59,10 +62,11 @@ def main():
                                  batch=config.training['batch_size'],
                                  augmentation=config.data['augmentation'],
                                  flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'])
+                                 flux_thresh=config.data['flux_thresh'],
+                                 feature_cols=config.data['feature_cols'])
 
     # define model
-    model = convnet_sc(dim=config.data['dim'],length=1,dropoutRatio=config.model['dropout_ratio'])
+    model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
 
     # load checkpoint
