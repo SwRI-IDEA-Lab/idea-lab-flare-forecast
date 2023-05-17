@@ -50,10 +50,12 @@ class convnet_sc(nn.Module):
             nn.LazyLinear(100),
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
+            nn.Linear(100,1),
+            nn.ReLU(inplace=True),
         )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(100+len_features,1),
+            nn.Linear(1+len_features,1),
             nn.Sigmoid()
         )
         
@@ -144,7 +146,7 @@ class LitConvNet(pl.LightningModule):
                 loss (torch tensor):    loss evaluated on batch
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0])
+        y = y.view(y.shape[0],-1)
         y_hat = self.model(x,f)
         loss = self.loss(y_hat,y.type_as(y_hat))
         self.train_acc(y_hat,y)
@@ -165,7 +167,7 @@ class LitConvNet(pl.LightningModule):
                 batch_idx:              index of batch                  
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0])
+        y = y.view(y.shape[0],-1)
         # forward pass
         y_hat = self.model(x,f)
         val_loss = self.loss(y_hat,y.type_as(y_hat))
@@ -207,7 +209,7 @@ class LitConvNet(pl.LightningModule):
                 batch_idx:              index of batch                  
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0])
+        y = y.view(y.shape[0],-1)
         # forward pass
         y_hat = self.model(x,f)
 
