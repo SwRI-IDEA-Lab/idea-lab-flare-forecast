@@ -46,7 +46,7 @@ class convnet_sc(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.fcl1 = nn.Sequential(
+        self.fcl = nn.Sequential(
             nn.LazyLinear(100),
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
@@ -61,6 +61,11 @@ class convnet_sc(nn.Module):
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
+
+        # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
+        with torch.no_grad():
+            self.fcl2[0].weight[0,1] = 6.18252855
+            self.fcl2[0].bias[0] = -3.07028227
         
 
     def _init_weights(self,module):
@@ -85,6 +90,7 @@ class convnet_sc(nn.Module):
             nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
+
     def forward(self,x,f):
         
         x = self.block1(x)
@@ -93,7 +99,7 @@ class convnet_sc(nn.Module):
         x = self.block4(x)
         x = self.block5(x)
         x = x.view(x.shape[0],-1)
-        x = self.fcl1(x)
+        x = self.fcl(x)
 
         # append features
         x = torch.cat([x,f],dim=1)
