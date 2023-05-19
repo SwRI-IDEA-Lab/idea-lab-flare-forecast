@@ -6,7 +6,7 @@ import pandas as pd
 import argparse
 from datetime import datetime,timedelta
 import csv
-from src.data_preprocessing.helper import read_catalog, add_label_data
+from src.data_preprocessing.helper import read_catalog, add_label_data, calculate_flaring_rate
 
 class Labeler():
     def __init__(self,index_file:str = None,out_file:str = None,flare_catalog:str = None,flare_windows:list=[24]):
@@ -45,6 +45,7 @@ class Labeler():
         cols = [col.rstrip('_MDIHWOSPG512') for col in self.samples.columns if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
         cols = list(dict.fromkeys(cols))  # filter only unique values
         header_row.extend(cols)
+        header_row.extend(['flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h'])
         for window in self.flare_windows:
             header_row.append('C_flare_in_'+str(window)+'h')
             header_row.append('M_flare_in_'+str(window)+'h')
@@ -97,7 +98,21 @@ class Labeler():
                 file_data = [fname,sample_time,data]
                 file_data.extend(list(sample.loc[sample.index.str.endswith('_'+dataset)])[4:])
                 break
+
+        # calculate flaring rates
+        for window in [365,30,7]:
+            # filter flares
+            flare_data = self.flares[(self.flares['peak_time']>=sample_time-timedelta(days=window))&(self.flares['peak_time']<=sample_time)]
+            file_data.append(calculate_flaring_rate(flare_data,window))
         
+        # calculate max historical flares
+        for window in [72,48,24]:
+            flare_data = self.flares[(self.flares['peak_time']>=sample_time-timedelta(hours=window))&(self.flares['peak_time']<=sample_time)]
+            if len(flare_data) == 0:
+                file_data.append(0)
+            else:
+                file_data.append(flare_data['intensity'].max())
+
         # add flare labels for each forecast window
         for window in self.flare_windows:
             flare_data = self.flares[(self.flares['peak_time']>=sample_time)&(self.flares['peak_time']<=sample_time+timedelta(hours=window))]

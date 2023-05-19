@@ -256,3 +256,18 @@ class LitConvNet(pl.LightningModule):
         fname, x, y = batch
         y = y.view(y.shape[0],-1)
         return fname, y, self.model(x)
+    
+    def on_load_checkpoint(self, checkpoint: dict) -> None:
+        state_dict = checkpoint["state_dict"]
+        model_state_dict = self.state_dict()
+        is_changed = False
+        for k in state_dict:
+            if k in model_state_dict:
+                if state_dict[k].shape != model_state_dict[k].shape:
+                    state_dict[k] = model_state_dict[k]
+                    is_changed = True
+            else:
+                is_changed = True
+
+        if is_changed:
+            checkpoint.pop("optimizer_states", None)
