@@ -65,11 +65,22 @@ def main():
                                  flux_thresh=config.data['flux_thresh'],
                                  feature_cols=config.data['feature_cols'])
 
+    # calculate class weights
+    data.prepare_data()
+    data.setup(stage='train')
+    beta = 0.9999
+    cls_num_list = [data.train_n,data.train_p]
+    effective_num = 1.0 - np.power(beta, cls_num_list)
+    per_cls_weights = (1.0 - beta) / np.array(effective_num)
+    per_cls_weights = per_cls_weights / np.sum(per_cls_weights) * len(cls_num_list)
+    per_cls_weights = torch.FloatTensor(per_cls_weights)
+    print('Class weights:',per_cls_weights)
+
     # define model
-    # weights = np.array([-3.85753394,1.35617824,0.5010206,-0.56691345,1.85041399,0.7660414,0.55303976,2.42641335,1.67886773,1.88992678,2.84953033])
-    weights = []
+    weights = np.array([-3.85753394,1.35617824,0.5010206,-0.56691345,1.85041399,0.7660414,0.55303976,2.42641335,1.67886773,1.88992678,2.84953033])
+    # weights = []
     model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),weights=weights,dropoutRatio=config.model['dropout_ratio'])
-    classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
+    classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'],cls_weights=per_cls_weights)
 
     # load checkpoint
     if wandb.run.resumed:
@@ -85,7 +96,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=10,mode='min')
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=12,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator='cpu',

@@ -183,6 +183,8 @@ class MagnetogramDataModule(pl.LightningDataModule):
               'Valid:',len(self.val_set),
               'Pseudo-test:',len(self.pseudotest_set),
               'Test:',len(self.test_set))
+        self.train_p = sum(df_train[self.label]==1)
+        self.train_n = sum(df_train[self.label]==0)
         print('P/N ratio in training:',sum(df_train[self.label]==1),sum(df_train[self.label]==0))
         print('P/N ratio in validation:',sum(df_val[self.label]==1),sum(df_val[self.label]==0))
         print('P/N ratio in pseudotest:',sum(df_pseudotest[self.label]==1),sum(df_pseudotest[self.label]==0))

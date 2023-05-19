@@ -55,8 +55,8 @@ class convnet_sc(nn.Module):
         )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(1+len_features,1),
-            nn.Sigmoid()
+            nn.Linear(1+len_features,2),
+            # nn.Sigmoid()
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -117,14 +117,17 @@ class LitConvNet(pl.LightningModule):
             wd (float):                 L2 regularization parameter
             epochs (int):               Number of epochs for scheduler
     """
-    def __init__(self,model,lr:float=1e-4,wd:float=1e-2,epochs:int=100):
+    def __init__(self,model,lr:float=1e-4,wd:float=1e-2,epochs:int=100,cls_weights=[0.28,1.72]):
         super().__init__()
         self.model = model
         self.lr = lr
         self.weight_decay = wd
         self.epochs = epochs
         # define loss function
-        self.loss = nn.BCELoss()    
+        # self.loss = nn.BCELoss()   
+        self.loss = nn.CrossEntropyLoss()
+        self.loss2 = nn.CrossEntropyLoss(weight=cls_weights)
+       
         # define metrics
         self.train_acc = torchmetrics.Accuracy(task='binary')
         self.train_f1 = torchmetrics.F1Score(task='binary')
@@ -153,9 +156,12 @@ class LitConvNet(pl.LightningModule):
                 loss (torch tensor):    loss evaluated on batch
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0],-1)
+        y = y.view(y.shape[0])
         y_hat = self.model(x,f)
-        loss = self.loss(y_hat,y.type_as(y_hat))
+        loss = self.loss(y_hat,y)
+
+        y_hat = nn.Softmax(dim=1)(y_hat)[:,1]
+
         self.train_acc(y_hat,y)
         self.train_f1(y_hat,y)
         self.log_dict({'loss':loss,
@@ -174,10 +180,12 @@ class LitConvNet(pl.LightningModule):
                 batch_idx:              index of batch                  
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0],-1)
+        y = y.view(y.shape[0])
         # forward pass
         y_hat = self.model(x,f)
-        val_loss = self.loss(y_hat,y.type_as(y_hat))
+        val_loss = self.loss(y_hat,y)
+
+        y_hat = nn.Softmax(dim=1)(y_hat)[:,1]
 
         # calculate metrics
         self.val_acc(y_hat,y)
@@ -186,8 +194,13 @@ class LitConvNet(pl.LightningModule):
         self.val_bss(y_hat,y)
         self.val_confusion_matrix.update(y_hat,y)
 
-        self.log_dict({'val_loss':val_loss,
-                      'val_acc':self.val_acc,
+        if self.current_epoch > 9:
+            self.log('val_loss',val_loss)
+        else:
+            self.log('val_loss',torch.tensor(float('nan')))
+    
+
+        self.log_dict({'val_acc':self.val_acc,
                       'val_aps':self.val_aps,
                       'val_f1':self.val_f1,
                       'val_bss':self.val_bss},
@@ -207,6 +220,12 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'val_TP':tp,'val_TN':tn,'val_FP':fp,'val_FN':fn,'val_tss':tss,'val_hss':hss})
         self.val_confusion_matrix.reset()
 
+        # change loss function if enough epochs have passed
+        if self.current_epoch == 9:
+            print('Switching to weighted CE loss function after',self.current_epoch+1,'epochs')
+            self.loss = self.loss2
+
+
     def test_step(self,batch,batch_idx):
         """
             Runs the model on the test set and logs test metrics 
@@ -216,9 +235,10 @@ class LitConvNet(pl.LightningModule):
                 batch_idx:              index of batch                  
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0],-1)
+        y = y.view(y.shape[0])
         # forward pass
         y_hat = self.model(x,f)
+        y_hat = nn.Softmax(dim=1)(y_hat)[:,1]
 
         # calculate metrics
         self.test_acc(y_hat,y)
@@ -271,7 +291,7 @@ class LitConvNet(pl.LightningModule):
         """
         fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
-        return fname, y, self.model(x,f)
+        return fname, y, nn.Softmax(dim=1)(self.model(x,f))[:,1]
     
     def on_load_checkpoint(self, checkpoint: dict) -> None:
         state_dict = checkpoint["state_dict"]
