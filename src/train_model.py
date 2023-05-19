@@ -66,7 +66,9 @@ def main():
                                  feature_cols=config.data['feature_cols'])
 
     # define model
-    model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),dropoutRatio=config.model['dropout_ratio'])
+    # weights = np.array([-3.85753394,1.35617824,0.5010206,-0.56691345,1.85041399,0.7660414,0.55303976,2.42641335,1.67886773,1.88992678,2.84953033])
+    weights = []
+    model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
 
     # load checkpoint

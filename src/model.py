@@ -14,7 +14,7 @@ class convnet_sc(nn.Module):
         dropoutRatio (float):   percentage of disconnections for Dropout
 
     """
-    def __init__(self, dim:int=256, length:int=1, len_features:int=0, dropoutRatio:float=0.0):
+    def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
@@ -63,10 +63,11 @@ class convnet_sc(nn.Module):
         self.apply(self._init_weights)
 
         # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
-        with torch.no_grad():
-            self.fcl2[0].weight[0,1] = 6.18252855
-            self.fcl2[0].bias[0] = -3.07028227
-        
+        # coeff intercept for LR model on all features [[ 1.35617824  0.5010206  -0.56691345  1.85041399  0.7660414   0.55303976 2.42641335  1.67886773  1.88992678  2.84953033]] [-3.85753394]
+        if len(weights)!=0:
+            with torch.no_grad():
+                self.fcl2[0].weight[0,1:] = torch.Tensor(weights[1:])
+                self.fcl2[0].bias[0] = weights[0]
 
     def _init_weights(self,module):
         """
