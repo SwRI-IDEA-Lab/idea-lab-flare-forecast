@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
+from linear_model import LinearModel
 import pandas as pd
 from pathlib import Path
 import numpy as np
@@ -65,9 +66,20 @@ def main():
                                  flux_thresh=config.data['flux_thresh'],
                                  feature_cols=config.data['feature_cols'])
 
-    # define model
-    weights = np.array([-3.85753394,1.35617824,0.5010206,-0.56691345,1.85041399,0.7660414,0.55303976,2.42641335,1.67886773,1.88992678,2.84953033])
-    # weights = []
+    # run LR model to obtain weights for final layer
+    lr_model = LinearModel(data_file=config.data['data_file'],
+                           window=config.data['forecast_window'],
+                           val_split=config.data['val_split'],
+                           flare_thresh=config.data['flare_thresh'],
+                           features=config.data['feature_cols'])
+    lr_model.prepare_data()
+    lr_model.setup()
+    lr_model.train()
+    
+    weights = lr_model.model.intercept_
+    weights = np.append(weights,lr_model.model.coef_[0])
+
+    # initialize model
     model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
 
@@ -85,7 +97,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=12,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator='cpu',

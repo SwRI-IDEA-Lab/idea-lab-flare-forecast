@@ -156,9 +156,9 @@ class LitConvNet(pl.LightningModule):
                 loss (torch tensor):    loss evaluated on batch
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0])
+        y = y.view(y.shape[0],-1)
         y_hat = self.model(x,f)
-        loss = self.loss(y_hat,y.as_type(y_hat))
+        loss = self.loss(y_hat,y.type_as(y_hat))
 
         self.train_acc(y_hat,y)
         self.train_f1(y_hat,y)
@@ -178,10 +178,10 @@ class LitConvNet(pl.LightningModule):
                 batch_idx:              index of batch                  
         """
         fname, x, f, y = batch
-        y = y.view(y.shape[0])
+        y = y.view(y.shape[0],-1)
         # forward pass
         y_hat = self.model(x,f)
-        val_loss = self.loss(y_hat,y.as_type(y_hat))
+        val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
         self.val_acc(y_hat,y)
