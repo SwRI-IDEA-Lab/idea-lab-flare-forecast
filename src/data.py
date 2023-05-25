@@ -9,7 +9,7 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from torch.utils.data import Dataset,DataLoader
-from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import MaxAbsScaler,StandardScaler
 from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
@@ -168,7 +168,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
             df_train = df_train.iloc[inds_train,:]
 
         # scale input features
-        self.scaler = MaxAbsScaler()
+        self.scaler = StandardScaler()
         self.scaler.fit(df_train.loc[:,self.feature_cols])
         df_train.loc[:,self.feature_cols] = self.scaler.transform(df_train.loc[:,self.feature_cols])
         df_val.loc[:,self.feature_cols] = self.scaler.transform(df_val.loc[:,self.feature_cols])
