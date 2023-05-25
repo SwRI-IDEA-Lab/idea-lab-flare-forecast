@@ -18,14 +18,16 @@ def split_data(df,val_split):
     # hold out test set
     inds_test_a = (df['sample_time']>=datetime(2016,1,1))&(df['sample_time']<datetime(2018,1,1)) 
     inds_test_b = (df['sample_time'].dt.month >= 11)
-    inds_test = inds_test_a | inds_test_b
+    # inds_test = inds_test_a | inds_test_b
+    inds_test = inds_test_b
     df_test = df.loc[inds_test,:]
     df_full = df.loc[~inds_test,:]
     # print('Bounds of test set:',df_test['sample_time'].min(),df_test['sample_time'].max())
     # print('Bounds of training set:',df_full['sample_time'].min(),df_full['sample_time'].max())
     
     # perform splitting of training and validation set
-    inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
+    # inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
+    inds_pseudotest = ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
     df_pseudotest = df_full.loc[inds_pseudotest,:]
     df_train = df_full.loc[~inds_pseudotest,:]
     df_train = df_train.reset_index(drop=True)
