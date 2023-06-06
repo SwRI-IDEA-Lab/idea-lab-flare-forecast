@@ -64,9 +64,10 @@ def main():
                                  augmentation=config.data['augmentation'],
                                  flare_thresh=config.data['flare_thresh'],
                                  flux_thresh=config.data['flux_thresh'],
-                                 feature_cols=config.data['feature_cols'])
+                                 feature_cols=config.data['feature_cols'],
+                                 test=config.data['test'])
 
-    # run LR model to obtain weights for final layer
+    # train LR model to obtain weights for final layer of CNN+LR
     lr_model = LinearModel(data_file=config.data['data_file'],
                            window=config.data['forecast_window'],
                            val_split=config.data['val_split'],
@@ -104,10 +105,7 @@ def main():
                          devices=1,
                          deterministic=False,
                          max_epochs=config.training['epochs'],
-                        #  log_every_n_steps=4,
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                        #  limit_train_batches=10,
-                        #  limit_val_batches=5,
                          logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
 

@@ -10,6 +10,7 @@ data:
   label: flare
   split_type: temporal
   val_split: 0
+  test: 'test_a'
 meta:
   id: None
   project: flare-forecast
@@ -24,5 +25,4 @@ training:
   batch_size: 256
   epochs: 100
   lr: 0.0001
-  pretrain: false
   wd: 0.001

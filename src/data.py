@@ -13,22 +13,34 @@ from sklearn.preprocessing import MaxAbsScaler,StandardScaler
 from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
-def split_data(df,val_split):
+def split_data(df,val_split,test=''):
 
-    # hold out test set
-    inds_test_a = (df['sample_time']>=datetime(2016,1,1))&(df['sample_time']<datetime(2018,1,1)) 
-    inds_test_b = (df['sample_time'].dt.month >= 11)
-    # inds_test = inds_test_a | inds_test_b
-    inds_test = inds_test_b
+    # hold out test sets
+    inds_test_a = (df['sample_time'].dt.month >= 11)
+    inds_test_b = (df['sample_time']>=datetime(2016,1,1))&(df['sample_time']<datetime(2018,1,1)) 
+    
+    # select test set
+    if test == 'test_a':
+        inds_test = inds_test_a
+    elif test == 'test_b':
+        inds_test = inds_test_b
+    else:
+        inds_test = inds_test_a | inds_test_b
+
     df_test = df.loc[inds_test,:]
     df_full = df.loc[~inds_test,:]
-    # print('Bounds of test set:',df_test['sample_time'].min(),df_test['sample_time'].max())
-    # print('Bounds of training set:',df_full['sample_time'].min(),df_full['sample_time'].max())
-    
-    # perform splitting of training and validation set
-    # inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
-    inds_pseudotest = ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
+
+    # select pseudotest/hold-out set
+    if test == 'test_a':
+        inds_pseudotest = ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
+    elif test == 'test_b':
+        inds_pseudotest = (df['sample_time']>=datetime(2015,12,26))
+    else:
+        inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
+    # inds_pseudotest = (df['sample_time']<datetime(1996,1,1)) | ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
     df_pseudotest = df_full.loc[inds_pseudotest,:]
+
+    # split training and validation
     df_train = df_full.loc[~inds_pseudotest,:]
     df_train = df_train.reset_index(drop=True)
     n_val = int(np.floor(len(df_train)/5))
@@ -102,11 +114,13 @@ class MagnetogramDataModule(pl.LightningDataModule):
             augmentation (str):     option to choose between None, conservative, or full data augmentation
             flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
             flux_thresh (float):    threshold for total unsigned flux to label as positive (default 4e7)
+            feature_cols (list):    list of columns names for scalar features
+            test (str):             which test set to choose (test_a or test_b else both)
     """
     def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', 
                  val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
                  augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 1.5e7,
-                 feature_cols=['tot_us_flux']):
+                 feature_cols=['tot_us_flux'], test: str = ''):
         super().__init__()
         self.data_file = data_file
         self.label = label
@@ -118,6 +132,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.balance_ratio = balance_ratio
         self.batch_size = batch
         self.feature_cols = feature_cols
+        self.test = test
 
         # define data transforms
         self.transform = transforms.Compose([
@@ -158,7 +173,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
-        df_test,df_pseudotest,df_train,df_val = split_data(self.df,self.val_split)
+        df_test,df_pseudotest,df_train,df_val = split_data(self.df,self.val_split,self.test)
 
         # balance training data
         if self.balance_ratio > 0:
