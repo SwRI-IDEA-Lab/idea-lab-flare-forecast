@@ -49,5 +49,5 @@ rule label:
     output:
         labels_file = "{savedir}/labels_{instrument}.csv"
     shell:
-        "python src/data_preprocessing/label_dataset.py {input.index_file} {output.labels_file}"
+        "python src/data_preprocessing/label_dataset.py {input.index_file} {output.labels_file} -w {config[forecast_windows]}"
 
