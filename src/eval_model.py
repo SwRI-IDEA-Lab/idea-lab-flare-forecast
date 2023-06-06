@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
+from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
 import numpy as np
@@ -21,15 +22,15 @@ def main():
     # read in config file
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
+
+    test = config.data['test']
     
+    # load config from specified wandb run
     run = wandb.init(project=config['meta']['project'],resume='must',id=config['meta']['id'])
     config = wandb.config
 
     dim = config.data['dim']
-    lr = config.training['lr']
-    wd = config.training['wd']
     batch = config.training['batch_size']
-    epochs = config.training['epochs']
 
     # set seeds
     pl.seed_everything(42,workers=True)
@@ -47,18 +48,13 @@ def main():
                                  flare_thresh=config.data['flare_thresh'],
                                  flux_thresh=config.data['flux_thresh'],
                                  feature_cols=config.data['feature_cols'],
-                                 test=config.data['test'])
+                                 test=test)
 
     # define model
     model = convnet_sc(dim=dim,length=1,len_features=len(config.data['feature_cols']),dropoutRatio=config.model['dropout_ratio'])
-    classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # load checkpoint
-    print('Loading model checkpoint from ', 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k')
-    artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+run.id+':best_k',type='model')
-    artifact_dir = artifact.download()
-    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
-
+    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
 
     for name, layer in model.named_modules():
         if isinstance(layer, torch.nn.Linear):
@@ -75,33 +71,15 @@ def main():
     data.prepare_data()
     data.setup('test')
 
-
     # save predictions locally
+    preds = trainer.predict(model=classifier,dataloaders=data.trainval_dataloader())
+    save_preds(preds,wandb.run.dir,'trainval_results.csv')
+
+    preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+    save_preds(preds,wandb.run.dir,'pseudotest_results.csv')
+
     preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
-
-    file = []
-    ytrue = []
-    ypred = []
-    for predbatch in preds:
-        file.extend(predbatch[0])
-        ytrue.extend(np.array(predbatch[1]).flatten())
-        ypred.extend(np.array(predbatch[2]).flatten())
-    df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
-    df.to_csv(wandb.run.dir+'/test_results.csv',index=False)
-    wandb.save('test_results.csv')
-
-    preds = trainer.predict(model=classifier,dataloaders=data.predict_dataloader())
-
-    file = []
-    ytrue = []
-    ypred = []
-    for predbatch in preds:
-        file.extend(predbatch[0])
-        ytrue.extend(np.array(predbatch[1]).flatten())
-        ypred.extend(np.array(predbatch[2]).flatten())
-    df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
-    df.to_csv(wandb.run.dir+'/trainval_results.csv',index=False)
-    wandb.save('trainval_results.csv')
+    save_preds(preds,wandb.run.dir,'test_results.csv')
 
     wandb.finish()
 
