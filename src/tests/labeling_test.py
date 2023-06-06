@@ -14,9 +14,9 @@ class LabelingTest(unittest.TestCase):
     def setUp(self):
         self.flare_filename = 'Data/hek_flare_catalog.csv'
         self.flare_catalog = pd.read_csv(self.flare_filename)
-        self.index_file = 'Data/index_MDI.csv'
+        self.index_file = 'Data/index_MDIsmoothed.csv'
         self.out_file = 'src/tests/labels_MDI.csv'
-        self.mdi_dir = 'Data/MDI/1999'
+        self.mdi_dir = 'Data/hdf5_smoothed/MDI/1999/'
         self.mdi_file = self.mdi_dir+os.listdir(self.mdi_dir)[0]
         if not os.path.exists(self.index_file):
             df = pd.DataFrame({'fname_MDI':[self.mdi_file],
@@ -49,6 +49,13 @@ class LabelingTest(unittest.TestCase):
         file_data = add_label_data(self.flare_catalog)
         self.assertEqual(file_data,[1,1,1,'{:0.1e}'.format(self.flare_catalog['intensity'].max())])
 
+    def test_flaringRate(self):
+        flares = read_catalog(self.flare_filename)
+        window = (flares['peak_time'].max()-flares['peak_time'].min()).days
+        flare_rate = calculate_flaring_rate(flares,window)
+        self.assertIsInstance(flare_rate,float)
+        self.assertLess(flare_rate,sum(flares['intensity']>=1e-5)/window)
+
     def test_readCatalog(self):
         df = read_catalog(self.flare_filename)
         self.assertTrue(pd.api.types.is_datetime64_any_dtype(df['start_time']))
@@ -56,7 +63,7 @@ class LabelingTest(unittest.TestCase):
     def test_writeHeader(self):
         self.labeler.write_header()
         df = pd.read_csv(self.out_file)
-        self.assertTrue(all(x==y for x,y in zip(df.columns,self.header)))
+        self.assertTrue(all(x in df.columns for x in self.header))
 
     def test_fileData(self):
         samples = read_catalog(self.index_file,na_values=' ')

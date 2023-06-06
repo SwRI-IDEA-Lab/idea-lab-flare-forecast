@@ -14,7 +14,7 @@ class convnet_sc(nn.Module):
         dropoutRatio (float):   percentage of disconnections for Dropout
 
     """
-    def __init__(self, dim:int=256, length:int=1, dropoutRatio:float=0.0):
+    def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
@@ -23,7 +23,7 @@ class convnet_sc(nn.Module):
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block2 = nn.Sequential(
-            nn.Conv2d(32, 32, (3,3),padding='valid'),
+            nn.Conv2d(32, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
@@ -35,14 +35,14 @@ class convnet_sc(nn.Module):
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block4 = nn.Sequential(
-            nn.ZeroPad2d((2,2)),
-            nn.Conv2d(64, 128, (3,3),padding='valid'),
+            # nn.ZeroPad2d((2,2)),
+            nn.Conv2d(64, 128, (3,3),padding='same'),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
         )
         self.block5 = nn.Sequential(
-            nn.Conv2d(128, 256, (3,3),padding='valid'),
+            nn.Conv2d(128, 256, (3,3),padding='same'),
             nn.ReLU(inplace=True),
         )
 
@@ -51,12 +51,23 @@ class convnet_sc(nn.Module):
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
+            nn.ReLU(inplace=True),
+        )
+        
+        self.fcl2 = nn.Sequential(
+            nn.Linear(1+len_features,1),
             nn.Sigmoid()
         )
         
-        self.forward(torch.ones(1,1,dim,dim))
+        self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
-        
+
+        # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
+        # coeff intercept for LR model on all features [[ 1.35617824  0.5010206  -0.56691345  1.85041399  0.7660414   0.55303976 2.42641335  1.67886773  1.88992678  2.84953033]] [-3.85753394]
+        if len(weights)!=0:
+            with torch.no_grad():
+                self.fcl2[0].weight[0,1:] = torch.Tensor(weights[1:])
+                self.fcl2[0].bias[0] = weights[0]
 
     def _init_weights(self,module):
         """
@@ -72,15 +83,16 @@ class convnet_sc(nn.Module):
 
         if isinstance(module,nn.Linear):
             # nn.init.zeros_(module.weight)
-            nn.init.normal_(module.weight)
+            nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
         if isinstance(module,nn.LazyLinear):
             # nn.init.zeros_(module.weight)
-            nn.init.normal_(module.weight)
+            nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
-    def forward(self,x):
+
+    def forward(self,x,f):
         
         x = self.block1(x)
         x = self.block2(x)
@@ -89,6 +101,10 @@ class convnet_sc(nn.Module):
         x = self.block5(x)
         x = x.view(x.shape[0],-1)
         x = self.fcl(x)
+
+        # append features
+        x = torch.cat([x,f],dim=1)
+        x = self.fcl2(x)
         return x
 
 class LitConvNet(pl.LightningModule):
@@ -108,7 +124,10 @@ class LitConvNet(pl.LightningModule):
         self.weight_decay = wd
         self.epochs = epochs
         # define loss function
-        self.loss = nn.BCELoss()    
+        self.loss = nn.BCELoss()   
+        # self.loss = nn.CrossEntropyLoss(weight=cls_weights)
+        # self.loss2 = nn.CrossEntropyLoss(weight=cls_weights)
+       
         # define metrics
         self.train_acc = torchmetrics.Accuracy(task='binary')
         self.train_f1 = torchmetrics.F1Score(task='binary')
@@ -136,10 +155,11 @@ class LitConvNet(pl.LightningModule):
             Returns:
                 loss (torch tensor):    loss evaluated on batch
         """
-        fname, x, y = batch
+        fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
-        y_hat = self.model(x)
-        loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        y_hat = self.model(x,f)
+        loss = self.loss(y_hat,y.type_as(y_hat))
+
         self.train_acc(y_hat,y)
         self.train_f1(y_hat,y)
         self.log_dict({'loss':loss,
@@ -157,11 +177,11 @@ class LitConvNet(pl.LightningModule):
                 batch:                  batch from a DataLoader
                 batch_idx:              index of batch                  
         """
-        fname, x, y = batch
+        fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
         # forward pass
-        y_hat = self.model(x)
-        val_loss = self.loss(y_hat,y.type(torch.FloatTensor))
+        y_hat = self.model(x,f)
+        val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
         self.val_acc(y_hat,y)
@@ -170,7 +190,8 @@ class LitConvNet(pl.LightningModule):
         self.val_bss(y_hat,y)
         self.val_confusion_matrix.update(y_hat,y)
 
-        self.log_dict({'val_loss':val_loss,
+        self.log_dict({
+                      'val_loss':val_loss,
                       'val_acc':self.val_acc,
                       'val_aps':self.val_aps,
                       'val_f1':self.val_f1,
@@ -191,6 +212,7 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'val_TP':tp,'val_TN':tn,'val_FP':fp,'val_FN':fn,'val_tss':tss,'val_hss':hss})
         self.val_confusion_matrix.reset()
 
+
     def test_step(self,batch,batch_idx):
         """
             Runs the model on the test set and logs test metrics 
@@ -199,10 +221,10 @@ class LitConvNet(pl.LightningModule):
                 batch:                  batch from a DataLoader
                 batch_idx:              index of batch                  
         """
-        fname, x, y = batch
-        y = y.view(y.shape[0],-1)
+        fname, x, f, y = batch
+        y = y.view(y.shape[0])
         # forward pass
-        y_hat = self.model(x)
+        y_hat = self.model(x,f)
 
         # calculate metrics
         self.test_acc(y_hat,y)
@@ -214,7 +236,8 @@ class LitConvNet(pl.LightningModule):
         self.log_dict({'test_acc':self.test_acc,
                        'test_aps':self.test_aps,
                        'test_f1':self.test_f1,
-                       'test_bss':self.test_bss})
+                       'test_bss':self.test_bss},
+                       on_step=False,on_epoch=True)
 
     def test_epoch_end(self,outputs):
         confusion_matrix = self.test_confusion_matrix.compute()
@@ -248,9 +271,25 @@ class LitConvNet(pl.LightningModule):
                 dataloader_idx
 
             Returns:
-                y_pred (tensor): model outputs for the batch
+                fname (tensor):  file names for samples
                 y_true (tensor): true labels for the batch
+                y_pred (tensor): model outputs for the batch
         """
-        fname, x, y = batch
+        fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
-        return self.model(x), y
+        return fname, y, self.model(x,f)
+    
+    def on_load_checkpoint(self, checkpoint: dict) -> None:
+        state_dict = checkpoint["state_dict"]
+        model_state_dict = self.state_dict()
+        is_changed = False
+        for k in state_dict:
+            if k in model_state_dict:
+                if state_dict[k].shape != model_state_dict[k].shape:
+                    state_dict[k] = model_state_dict[k]
+                    is_changed = True
+            else:
+                is_changed = True
+
+        if is_changed:
+            checkpoint.pop("optimizer_states", None)

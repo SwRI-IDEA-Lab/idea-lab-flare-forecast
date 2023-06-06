@@ -1,22 +1,28 @@
-# config file for torch lightning
-
-meta: 
-  project: 'flare-forecast'
 data:
-  data_file: 'Data/labels_MDI.csv'
-  forecast_window: 24
+  augmentation: conservative
+  balance_ratio: 0
+  data_file: Data/labels_all_smoothed.csv
   dim: 128
-  split_type: 'temporal'
-  balance_ratio: 1
-  label: 'flare'
-  flux_thresh: 40000000
-  flare_thresh: 0.00001
-  augmentation: None
+  feature_cols: ['tot_us_flux','tot_flux','datamin','datamax','flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h']
+  flare_thresh: 1.0e-05
+  flux_thresh: 15000000
+  forecast_window: 24
+  label: flare
+  split_type: temporal
+  val_split: 0
+  test: 'test_a'
+meta:
+  id: None
+  project: flare-forecast
+  resume: false
 model:
+  checkpoint_location: None
   dropout_ratio: 0
+  load_checkpoint: false
+testing:
+  eval: false
 training:
+  batch_size: 256
+  epochs: 100
   lr: 0.0001
   wd: 0.001
-  batch_size: 64
-  epochs: 50
-  

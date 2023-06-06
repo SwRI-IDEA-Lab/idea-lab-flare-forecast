@@ -1,7 +1,7 @@
 import sys,os
 sys.path.append(os.getcwd())
 import unittest
-from src.model import convnet_sc
+from src.model import convnet_sc, LitConvNet
 import numpy as np
 import torch
 import h5py
@@ -16,8 +16,10 @@ class ModelTest(unittest.TestCase):
         filename = self.files[0]
         self.x = torch.tensor(np.array(h5py.File(filename, 'r')['magnetogram']).astype(np.float32))[None,None,:,:]
         self.x[torch.isnan(self.x)]=0
+        self.f = torch.tensor([0.5])[None,:]
         self.dim = self.x.shape[-1]
-        self.model = convnet_sc(dim=self.dim)
+        self.model = convnet_sc(dim=self.dim,len_features=1)
+        print(self.model)
 
     def test_modelexists(self):
         self.assertIsNotNone(self.model)
@@ -31,7 +33,7 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(not torch.isnan(self.x).any())
 
     def test_modelforward(self):
-        output = self.model.forward(self.x)
+        output = self.model.forward(self.x,self.f)
         print(output)
         self.assertTrue(output.shape[0] == 1)
         self.assertTrue(output >= 0 and output <= 1)
@@ -42,6 +44,10 @@ class ModelTest(unittest.TestCase):
                 print(name, layer)        
                 print(layer.weight)
                 print(layer.bias)
+    
+    def test_loadCheckpoint(self):
+        classifier = LitConvNet.load_from_checkpoint('artifacts/model-zrnoue78:v1/model.ckpt',model=self.model,strict=False)
+
 
 
 if __name__ == "__main__":

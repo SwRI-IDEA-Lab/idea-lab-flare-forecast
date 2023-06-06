@@ -133,14 +133,23 @@ dmypy.json
 *.png
 *.csv
 *.fits
+*.ods
 
 # log files
 src/lightning_logs/*
 lightning_logs/*
 wandb/*
 *.ckpt
+*.ods
 
 # snakemake
-.snakemake
+.snakemake/*
 .snakemake*
 
+# handouts
+handouts
+notebooks/*.ipynb
+notebooks/Figures/*
+
+# eval scripts
+src/eval_models.py
