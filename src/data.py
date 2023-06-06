@@ -214,6 +214,9 @@ class MagnetogramDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(self.val_set,batch_size=self.batch_size,num_workers=4)
 
+    def trainval_dataloader(self):
+        return DataLoader(self.trainval_set,batch_size=self.batch_size,num_workers=4)
+
     def pseudotest_dataloader(self):
         return DataLoader(self.pseudotest_set,batch_size=self.batch_size,num_workers=4)
 
@@ -221,7 +224,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
         return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
 
     def predict_dataloader(self):
-        return DataLoader(self.trainval_set,batch_size=self.batch_size,num_workers=4)
+        return DataLoader(self.test_set,batch_size=self.batch_size,num_workers=4)
 
 
 

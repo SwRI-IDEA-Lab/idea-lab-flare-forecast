@@ -1,39 +1,19 @@
 import sys,os
 sys.path.append(os.getcwd())
 
-import torch
-from torch import nn
-from torchvision import transforms
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
 from linear_model import LinearModel
+from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
 import numpy as np
 import wandb
 from pytorch_lightning.loggers import WandbLogger
 import yaml
-
-def load_model(run,ckpt_path,model,strict=True):
-    """
-    Load model into wandb run by downloading and initializing weights
-
-    Parameters:
-        run:        wandb run object
-        ckpt_path:  wandb path to download model checkpoint from
-        model:      model class
-    Returns:
-        classifier: LitConvNet object with loaded weights
-    """
-    print('Loading model checkpoint from ', ckpt_path)
-    artifact = run.use_artifact(ckpt_path,type='model')
-    artifact_dir = artifact.download()
-    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
-    return classifier
 
 def main():    
     # read in config file
@@ -113,23 +93,16 @@ def main():
     if config.testing['eval']:
         # load best checkpoint
         classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
-    
-        # run test to log metrics to wandb
-        trainer.test(model=classifier,dataloaders=data.pseudotest_dataloader())
 
         # save predictions locally
-        preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+        preds = trainer.predict(model=classifier,dataloaders=data.trainval_dataloader())
+        save_preds(preds,wandb.run.dir,'trainval_results.csv')
 
-        file = []
-        ytrue = []
-        ypred = []
-        for predbatch in preds:
-            file.extend(predbatch[0])
-            ytrue.extend(np.array(predbatch[1]).flatten())
-            ypred.extend(np.array(predbatch[2]).flatten())
-        df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
-        df.to_csv(wandb.run.dir+'/pseudotest_results.csv',index=False)
-        wandb.save('pseudotest_results.csv')
+        preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+        save_preds(preds,wandb.run.dir,'pseudotest_results.csv')
+
+        preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
+        save_preds(preds,wandb.run.dir,'test_results.csv')
 
     wandb.finish()
 
