@@ -16,8 +16,9 @@ class ModelTest(unittest.TestCase):
         filename = self.files[0]
         self.x = torch.tensor(np.array(h5py.File(filename, 'r')['magnetogram']).astype(np.float32))[None,None,:,:]
         self.x[torch.isnan(self.x)]=0
+        self.f = torch.tensor([0.5])[None,:]
         self.dim = self.x.shape[-1]
-        self.model = convnet_sc(dim=self.dim)
+        self.model = convnet_sc(dim=self.dim,len_features=1)
         print(self.model)
 
     def test_modelexists(self):
@@ -32,7 +33,7 @@ class ModelTest(unittest.TestCase):
         self.assertTrue(not torch.isnan(self.x).any())
 
     def test_modelforward(self):
-        output = self.model.forward(self.x)
+        output = self.model.forward(self.x,self.f)
         print(output)
         self.assertTrue(output.shape[0] == 1)
         self.assertTrue(output >= 0 and output <= 1)

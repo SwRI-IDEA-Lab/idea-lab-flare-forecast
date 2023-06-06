@@ -45,10 +45,12 @@ def main():
                                  batch=batch,
                                  augmentation=config.data['augmentation'],
                                  flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'])
+                                 flux_thresh=config.data['flux_thresh'],
+                                 feature_cols=config.data['feature_cols'],
+                                 test=config.data['test'])
 
     # define model
-    model = convnet_sc(dim=dim,length=1,dropoutRatio=config.model['dropout_ratio'])
+    model = convnet_sc(dim=dim,length=1,len_features=len(config.data['feature_cols']),dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,lr,wd,epochs=epochs)
 
     # load checkpoint
@@ -56,6 +58,13 @@ def main():
     artifact = run.use_artifact('kierav/'+config.meta['project']+'/model-'+run.id+':best_k',type='model')
     artifact_dir = artifact.download()
     classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model)
+
+
+    for name, layer in model.named_modules():
+        if isinstance(layer, torch.nn.Linear):
+            print(name, layer)        
+            print(layer.weight)
+            print(layer.bias)
 
     # evaluate model
     trainer = pl.Trainer(accelerator='cpu',
@@ -66,8 +75,9 @@ def main():
     data.prepare_data()
     data.setup('test')
 
+
     # save predictions locally
-    preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+    preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
 
     file = []
     ytrue = []
@@ -77,8 +87,8 @@ def main():
         ytrue.extend(np.array(predbatch[1]).flatten())
         ypred.extend(np.array(predbatch[2]).flatten())
     df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
-    df.to_csv(wandb.run.dir+'/pseudotest_results.csv',index=False)
-    wandb.save('pseudotest_results.csv')
+    df.to_csv(wandb.run.dir+'/test_results.csv',index=False)
+    wandb.save('test_results.csv')
 
     preds = trainer.predict(model=classifier,dataloaders=data.predict_dataloader())
 

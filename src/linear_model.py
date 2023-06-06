@@ -20,7 +20,7 @@ class LinearModel():
         self.window = window
         self.flare_thresh = flare_thresh
         self.val_split = val_split
-        self.scaler = MaxAbsScaler()
+        self.scaler = StandardScaler()
         self.features = features
         self.label = 'flare'
         self.model = LogisticRegression(class_weight=class_weight,random_state=val_split)
