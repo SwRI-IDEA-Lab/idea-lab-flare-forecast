@@ -1,17 +1,20 @@
 configfile: "snakemake_config.yaml"
-
+configfile: "experiment_config.yml"
 
 wildcard_constraints:
-    instrument = "[MHS5mhs].*"
+    instrument = "[MHS5mhsa].*"
 
 rule all:
     input: 
-        expand("{savedir}/{instrument}",savedir=config['save_dir'],instrument=config['instrument_download']),
-        expand("{savedir}/index_{instrument}.csv",savedir=config['save_dir'],instrument=config['instrument_process']),
-        expand("{savedir}/labels_{instrument}.csv",savedir=config['save_dir'],instrument=config['instrument_process']),
-        "{sd}/index_".format(sd=config['save_dir'])+'_'.join(config['instrument_process'])+'.csv',
-        "{sd}/labels_".format(sd=config['save_dir'])+'_'.join(config['instrument_process'])+'.csv'
-        
+        # expand("{savedir}/{instrument}",savedir=config['save_dir'],instrument=config['instrument_download']),
+        # expand("{savedir}/index_{instrument}.csv",savedir=config['save_dir'],instrument=config['instrument_process']),
+        # expand("{savedir}/labels_{instrument}.csv",savedir=config['save_dir'],instrument=config['instrument_process']),
+        # "{sd}/index_all_smoothed.csv".format(sd=config['save_dir']),
+        # "{sd}/labels_all_smoothed.csv".format(sd=config['save_dir']),
+        config['data']['data_file']
+    shell:
+        "python src/train_models.py"
+
 rule download:
     output:
         path = directory("{savedir}/{instrument}/")
@@ -32,7 +35,8 @@ rule mergeindices:
     input:
         ["{sd}/index_{instrument}.csv".format(sd=config['save_dir'],instrument=instrument) for instrument in config['instrument_process']]
     output:
-        "{savedir}/index_"+'_'.join(config['instrument_process'])+'.csv'
+        # "{savedir}/index_"+'_'.join(config['instrument_process'])+'.csv'
+        "{savedir}/index_all_smoothed.csv"
     run:
         from src.data_preprocessing.index_clean_magnetograms import merge_indices_by_date
         import pandas as pd
@@ -46,3 +50,4 @@ rule label:
         labels_file = "{savedir}/labels_{instrument}.csv"
     shell:
         "python src/data_preprocessing/label_dataset.py {input.index_file} {output.labels_file}"
+
