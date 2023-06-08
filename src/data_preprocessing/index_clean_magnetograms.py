@@ -179,21 +179,7 @@ class Indexer:
             header = fix_header(header,self.data,timestamp)
 
         # calibrate and smooth based on instrument
-        if self.data == 'MDI':
-            img = img/1.3
-            kernel = Gaussian2DKernel(1)
-            img = convolve(img,kernel)
-        elif self.data == 'HMI':
-            kernel = Gaussian2DKernel(4)
-            img = convolve(img,kernel)
-        elif self.data == 'SPMG':
-            kernel = Gaussian2DKernel(1.74)
-            img = convolve(img,kernel)
-        elif self.data == '512':
-            kernel = Gaussian2DKernel(2)
-            img = convolve(img,kernel)
-        elif self.data == 'MWO':
-            img = img*2
+        img = calibrate_img(img,self.data)
 
         # create sunpy map, reproject and calculate total unsigned flux on reprojection
         map = Map(img,header)
