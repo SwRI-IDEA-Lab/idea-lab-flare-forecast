@@ -14,6 +14,24 @@ from src.utils.transforms import RandomPolaritySwitch
 from datetime import datetime,timedelta
 
 def split_data(df,val_split,test=''):
+    """
+        Split dataset into training, validation, hold-out (pseudotest) and test sets.
+        The test set can be either 'test_a' which is all data from November and December,
+        or 'test_b' which is 2016-2017, or both combined. The hold-out set is data from
+        Sept 15-Oct 31. The remaining data is split temporally 4:1 into training and 
+        validation.
+
+        Parameters:
+            df (dataframe):     Pandas dataframe containing all the data
+            val_split (0-4):    Number between 0-4 indicating which temporal training/validation split to select    
+            test (str):         Which test set to choose ('test_a' or 'test_b', otherwise both)
+
+        Returns:
+            df_test (dataframe):        Test set
+            df_pseudotest (dataframe):  Hold-out set
+            df_train (dataframe):       Training set
+            df_val (dataframe):         Validation set
+    """
 
     # hold out test sets
     inds_test_a = (df['sample_time'].dt.month >= 11)

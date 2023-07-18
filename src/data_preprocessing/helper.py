@@ -2,6 +2,7 @@
 Helper functions for data pre-processing
 """
 
+from astropy.convolution import convolve, convolve_fft, Gaussian2DKernel
 from datetime import datetime,timedelta
 import numpy as np
 from src.utils.utils import mapPixelArea, makeBMask
@@ -173,6 +174,36 @@ def compute_tot_flux(map, Blim=30, area_threshold=64):
     tot_flux = np.nansum(Bdata*Bmask)
     tot_us_flux = np.nansum(np.abs(Bdata*Bmask))
     return tot_flux, tot_us_flux
+
+def calibrate_img(img,dataset):
+    """
+    Calibrate and smooth magnetogram image based on instrument
+
+    Parameters:
+        img:            magnetogram data extracted from fits
+        dataset (str):  which magnetogram instrument (HMI,MDI,SPMG,512,MWO)
+    
+    Returns:
+        img:            calibrated magnetogram data
+    """
+    
+    if dataset == 'MDI':
+        img = img/1.3
+        kernel = Gaussian2DKernel(1)
+        img = convolve(img,kernel)
+    elif dataset == 'HMI':
+        kernel = Gaussian2DKernel(4)
+        img = convolve(img,kernel)
+    elif dataset == 'SPMG':
+        kernel = Gaussian2DKernel(1.74)
+        img = convolve(img,kernel)
+    elif dataset == '512':
+        kernel = Gaussian2DKernel(2)
+        img = convolve(img,kernel)
+    elif dataset == 'MWO':
+        img = img*2
+
+    return img
 
 def extract_fits(data_fits,dataset):
     """
