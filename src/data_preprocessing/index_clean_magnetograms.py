@@ -247,7 +247,7 @@ def merge_indices_by_date(root_dir,datasets):
     """
     df_merged = pd.DataFrame({'date':[]})
     for data in datasets:
-        filename = Path(root_dir)/('index_'+data.upper()+'.csv')
+        filename = Path(root_dir)/('index_'+data+'.csv')
         df = pd.read_csv(filename)
         df_merged = df_merged.merge(df,how='outer',on='date',sort=True)
     print(len(df_merged),'entries in merged index')
