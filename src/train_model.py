@@ -95,12 +95,15 @@ def main():
         classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
 
         # save predictions locally
+        print('------Train/val predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.trainval_dataloader())
         save_preds(preds,wandb.run.dir,'trainval_results.csv')
 
+        print('------Pseudotest predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
         save_preds(preds,wandb.run.dir,'pseudotest_results.csv')
 
+        print('------Test predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
         save_preds(preds,wandb.run.dir,'test_results.csv')
 

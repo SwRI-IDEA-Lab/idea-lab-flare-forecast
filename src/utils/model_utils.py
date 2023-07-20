@@ -3,13 +3,14 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 import os
+from utils.analysis_helper import print_metrics
 import wandb
 
 def load_model(run,ckpt_path,model,strict=True):
     """
     Load model into wandb run by downloading and initializing weights
 
-    Parameters:
+    Parameters:forecasting
         run:        wandb run object
         ckpt_path:  wandb path to download model checkpoint from
         model:      model class
@@ -38,6 +39,7 @@ def save_preds(preds,dir,fname):
         file.extend(predbatch[0])
         ytrue.extend(np.array(predbatch[1]).flatten())
         ypred.extend(np.array(predbatch[2]).flatten())
+    print_metrics(ypred,ytrue,True)
     df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
     df.to_csv(dir+os.sep+fname,index=False)
     wandb.save(fname)
