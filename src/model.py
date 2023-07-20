@@ -77,17 +77,14 @@ class convnet_sc(nn.Module):
             as zeros.
         """
         if isinstance(module,nn.Conv2d):
-            # nn.init.zeros_(module.weight)
             nn.init.xavier_uniform_(module.weight)
             module.bias.data.zero_()
 
         if isinstance(module,nn.Linear):
-            # nn.init.zeros_(module.weight)
             nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
         if isinstance(module,nn.LazyLinear):
-            # nn.init.zeros_(module.weight)
             nn.init.xavier_normal_(module.weight)
             module.bias.data.zero_()
 
@@ -125,21 +122,19 @@ class LitConvNet(pl.LightningModule):
         self.epochs = epochs
         # define loss function
         self.loss = nn.BCELoss()   
-        # self.loss = nn.CrossEntropyLoss(weight=cls_weights)
-        # self.loss2 = nn.CrossEntropyLoss(weight=cls_weights)
-       
+
         # define metrics
         self.train_acc = torchmetrics.Accuracy(task='binary')
         self.train_f1 = torchmetrics.F1Score(task='binary')
         self.val_acc = torchmetrics.Accuracy(task='binary')
         self.val_aps = torchmetrics.AveragePrecision(task='binary')
         self.val_f1 = torchmetrics.F1Score(task='binary')
-        self.val_bss = torchmetrics.MeanSquaredError()
+        self.val_mse = torchmetrics.MeanSquaredError()
         self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
         self.test_acc = torchmetrics.Accuracy(task='binary')
         self.test_aps = torchmetrics.AveragePrecision(task='binary')
         self.test_f1 = torchmetrics.F1Score(task='binary')
-        self.test_bss = torchmetrics.MeanSquaredError()
+        self.test_mse = torchmetrics.MeanSquaredError()
         self.test_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
         # self.save_hyperparameters(ignore=['model'])
 
@@ -187,7 +182,7 @@ class LitConvNet(pl.LightningModule):
         self.val_acc(y_hat,y)
         self.val_aps(y_hat,y)
         self.val_f1(y_hat,y)
-        self.val_bss(y_hat,y)
+        self.val_mse(y_hat,y)
         self.val_confusion_matrix.update(y_hat,y)
 
         self.log_dict({
@@ -195,7 +190,7 @@ class LitConvNet(pl.LightningModule):
                       'val_acc':self.val_acc,
                       'val_aps':self.val_aps,
                       'val_f1':self.val_f1,
-                      'val_bss':self.val_bss},
+                      'val_mse':self.val_mse},
                       on_step=False,on_epoch=True)
 
     def validation_epoch_end(self,outputs):
@@ -230,13 +225,13 @@ class LitConvNet(pl.LightningModule):
         self.test_acc(y_hat,y)
         self.test_aps(y_hat,y)
         self.test_f1(y_hat,y)
-        self.test_bss(y_hat,y)
+        self.test_mse(y_hat,y)
         self.test_confusion_matrix.update(y_hat,y)
 
         self.log_dict({'test_acc':self.test_acc,
                        'test_aps':self.test_aps,
                        'test_f1':self.test_f1,
-                       'test_bss':self.test_bss},
+                       'test_mse':self.test_mse},
                        on_step=False,on_epoch=True)
 
     def test_epoch_end(self,outputs):
