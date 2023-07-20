@@ -81,7 +81,7 @@ def main():
     early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min',strict=False,check_finite=False)
 
     # train model
-    trainer = pl.Trainer(accelerator='cpu',
+    trainer = pl.Trainer(accelerator=config.training['device'],
                          devices=1,
                          deterministic=False,
                          max_epochs=config.training['epochs'],
