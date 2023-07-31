@@ -118,7 +118,7 @@ class Labeler():
         # add flare labels for each forecast window
         goes_ts = self.retrieve_goes_data(sample_time)
         for window in self.flare_windows:
-            file_data.extend(self.add_regression_data(goes_ts,sample_time,window))
+            file_data.append(self.add_regression_data(goes_ts,sample_time,window))
 
         return file_data
     
@@ -137,7 +137,7 @@ class Labeler():
             sample_time_next = sample_time+timedelta(days=i)
             goes_files.extend(glob.glob(self.goes_dir+str(sample_time_next.year)+'/**'+datetime.strftime(sample_time_next,'%y%m%d')+'**'))
         if len(goes_files) == 0:
-            return None
+            return []
         goes_ts = ts.TimeSeries(goes_files,concatenate=True).to_dataframe()
         goes_ts = goes_ts[(goes_ts.index <= sample_time+timedelta(hours=max(self.flare_windows))) & (goes_ts.index>sample_time)]
         return goes_ts
@@ -145,7 +145,7 @@ class Labeler():
 
     def add_regression_data(self,goes_ts,sample_time,window):
         """
-        Returns maximum of xrsb in timeseries over window
+        Returns maximum of xrsb in timeseries over window. If no GOES data found, returns nan
         
         Parameters:
             goes_ts (dataframe)     GOES timeseries dataframe
@@ -155,6 +155,9 @@ class Labeler():
         Returns:
             max value of GOES data over window
         """
+        if len(goes_ts) == 0:
+            return np.nan
+        
         return goes_ts[goes_ts.index<=sample_time+timedelta(hours=window)]['xrsb'].max()
         
 

@@ -34,6 +34,8 @@ class LabelingTest(unittest.TestCase):
         goes_data = self.labeler.retrieve_goes_data(self.sample_time)
         label = self.labeler.add_regression_data(goes_data,self.sample_time,self.windows[0])
         self.assertIsInstance(label,np.float32)    
+        nolabel = self.labeler.add_regression_data([],self.sample_time,self.windows[0])
+        self.assertTrue(np.isnan(nolabel))
 
     def test_labellerExists(self):
         self.assertIsNotNone(self.labeler)
