@@ -1,0 +1,203 @@
+import sys,os
+sys.path.append(os.getcwd())
+
+from astropy.io import fits
+import glob
+import numpy as np
+import pandas as pd
+import argparse
+from datetime import datetime,timedelta
+import csv
+from src.data_preprocessing.helper import read_catalog, add_label_data, calculate_flaring_rate
+from sunpy import timeseries as ts
+
+class Labeler():
+    def __init__(self,index_file:str = None,out_file:str = None,flare_catalog:str = None,
+                 flare_windows:list=[24],goes_dir:str='Data/goes/'):
+        """
+        Initialize a labeling class to select best available data and add flare labels
+
+        Parameters:
+            index_file (str):       Path to index of data
+            out_file (str):         Filename to save labeled dataset
+            flare_catalog (str):    Path to index of flares
+            flare_windows (list):   Forecast windows in hours
+        """
+        self.flare_windows = flare_windows   
+        self.file = out_file
+        self.goes_dir = goes_dir
+
+        # read in flare catalog
+        self.flares = read_catalog(flare_catalog)
+
+        # read in index file
+        self.samples = read_catalog(index_file,na_values=' ')
+        # drop samples with the same date, keeping the first entry
+        self.samples.drop_duplicates(subset='date',keep='first',ignore_index=True,inplace=True)
+
+        # set start date for dataset as the max forecast window before the first flare in the catalog
+        start_date = int(datetime.strftime(self.flares['start_time'][0]-timedelta(hours = max(self.flare_windows)),'%Y%m%d'))
+        # discard samples earlier than the start date
+        self.samples = self.samples[self.samples['date']>=start_date]
+        self.samples.reset_index(drop=True,inplace=True)
+
+    def write_header(self):
+        """
+        Writes header columns to labels file
+        """
+        # header columns
+        header_row = ['filename','sample_time','dataset']
+        cols = [col.rstrip('_MDIHWOSPG512') for col in self.samples.columns if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
+        cols = list(dict.fromkeys(cols))  # filter only unique values
+        header_row.extend(cols)
+        header_row.extend(['flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h'])
+        for window in self.flare_windows:
+            header_row.append('xrsb_max_in_'+str(window)+'h')
+
+        # write header to file
+        print(header_row)
+        with open(self.file,'w') as out_file:
+            out_writer = csv.writer(out_file,delimiter=',')
+            out_writer.writerow(header_row)
+
+        return 
+    
+    def label_data(self):
+        """
+        Iterate through index and write flare label data to file
+        """
+        out_file = open(self.file,'a')
+        out_writer = csv.writer(out_file,delimiter=',')
+
+        for i in self.samples.index:
+            sample = self.samples.iloc[i]
+            file_data = self.generate_file_data(sample)
+            out_writer.writerow(file_data)
+
+        out_file.close()
+    
+    def generate_file_data(self,sample):
+        """
+        For a given data sample, generates list of information for labels file
+
+        Parameters:
+            sample:     pandas series with filenames and times for this days sample
+
+        Returns:
+            file_data:  list of data to write to labels file for this sample
+        """
+        # order of preference of datasets
+        datasets = ['HMI','MDI','SPMG','512','MWO']   
+
+        # find prefered dataset for that day out of those available
+        for dataset in datasets:
+            if 'filename_'+dataset not in sample:
+                continue
+            if pd.notna(sample['filename_'+dataset]):
+                fname = sample['filename_'+dataset]
+                sample_time = sample['timestamp_'+dataset]
+                data = dataset
+                file_data = [fname,sample_time,data]
+                file_data.extend(list(sample.loc[sample.index.str.endswith('_'+dataset)])[4:])
+                break
+
+        # calculate flaring rates
+        for window in [365,30,7]:
+            # filter flares
+            flare_data = self.flares[(self.flares['peak_time']>=sample_time-timedelta(days=window))&(self.flares['peak_time']<=sample_time)]
+            file_data.append(calculate_flaring_rate(flare_data,window))
+        
+        # calculate max historical flares
+        for window in [72,48,24]:
+            flare_data = self.flares[(self.flares['peak_time']>=sample_time-timedelta(hours=window))&(self.flares['peak_time']<=sample_time)]
+            if len(flare_data) == 0:
+                file_data.append(0)
+            else:
+                file_data.append(flare_data['intensity'].max())
+
+        # add flare labels for each forecast window
+        goes_ts = self.retrieve_goes_data(sample_time)
+        for window in self.flare_windows:
+            file_data.extend(self.add_regression_data(goes_ts,sample_time,window))
+
+        return file_data
+    
+    def retrieve_goes_data(self,sample_time):
+        """
+        Retrieve GOES data ahead of sample (up to max flare window)
+        
+        Parameters:
+            sample_time (datetime)      desired time
+
+        Returns:
+            goes_ts (dataframe):        GOES sunpy timeseries 
+        """
+        goes_files = glob.glob(self.goes_dir+str(sample_time.year)+'/**'+datetime.strftime(sample_time,'%y%m%d')+'**')
+        for i in range(int(np.ceil(max(self.flare_windows)/24))):
+            sample_time_next = sample_time+timedelta(days=i)
+            goes_files.extend(glob.glob(self.goes_dir+str(sample_time_next.year)+'/**'+datetime.strftime(sample_time_next,'%y%m%d')+'**'))
+        if len(goes_files) == 0:
+            return None
+        goes_ts = ts.TimeSeries(goes_files,concatenate=True).to_dataframe()
+        goes_ts = goes_ts[(goes_ts.index <= sample_time+timedelta(hours=max(self.flare_windows))) & (goes_ts.index>sample_time)]
+        return goes_ts
+    
+
+    def add_regression_data(self,goes_ts,sample_time,window):
+        """
+        Returns maximum of xrsb in timeseries over window
+        
+        Parameters:
+            goes_ts (dataframe)     GOES timeseries dataframe
+            sample_time (datetime)  time of sample
+            window (int)            in hours
+
+        Returns:
+            max value of GOES data over window
+        """
+        return goes_ts[goes_ts.index<=sample_time+timedelta(hours=window)]['xrsb'].max()
+        
+
+def parse_args(args=None):
+    """
+    Parses command line arguments to script. Sets up argument for which 
+    dataset to label.
+
+    Parameters:
+        args (list):    defaults to parsing any command line arguments
+    
+    Returns:
+        parser args:    Namespace from argparse
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('index_file',
+                        type=str,
+                        help='path to index file for labeling')
+    parser.add_argument('out_file',
+                        type=str,
+                        help='filename to save labels data'
+                        )
+    parser.add_argument('-w','--flare_windows',
+                        type=int,
+                        nargs='*',
+                        default=[12,24,48],
+                        help='forecast windows for labeling, in hours'
+                        )
+
+    return parser.parse_args(args)
+
+
+def main():
+    # parse command line arguments
+    parser = parse_args()
+    flare_catalog = 'Data/hek_flare_catalog.csv'
+    goes_dir = '/home/kvandersande/sunpy/data/goes/'
+
+    # create labeler instance
+    labeler = Labeler(parser.index_file, parser.out_file,
+                      flare_catalog,parser.flare_windows,goes_dir=goes_dir)
+    labeler.write_header()
+    labeler.label_data()
+
+if __name__ == '__main__':
+    main()
