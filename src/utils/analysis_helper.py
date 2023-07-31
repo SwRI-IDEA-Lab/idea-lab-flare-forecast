@@ -128,7 +128,7 @@ def reliability_diag(ytrue,ypred,ax,label,nbins=10,plot=True,plot_hist=False,**k
 
     return ece,mce
 
-def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
+def calibrate_prob(run,nbinnings=20,pseudotest=True,rootdir='../'):
     """
     Loads model predictions and calibrates probabilites based on train/val dataset
 
@@ -136,16 +136,16 @@ def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
         run (str):          wandb run id
         nbinnings (int):    number of binnings for the probability calibration
         pseudotest (bool):  whether to load the pseudotest/holdout or the test set
-        root (str):         root dir to append when searching for wandb files
+        rootdir (str):      root dir to append when searching for wandb files
     Returns:
         df_test (dataframe): test data including filename, true, predicted and calibrated outputs
         df_trainval (dataframe):    trainval data
     """
     if pseudotest:
-        test_file = sorted(glob.glob(root+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
+        test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
     else:
-        test_file = sorted(glob.glob(root+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
-    trainval_file = sorted(glob.glob(root+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
+        test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
+    trainval_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
     df_test = pd.read_csv(test_file)
     df_trainval = pd.read_csv(trainval_file)
     calibrator = probability_calibration(df_trainval['ypred'],df_trainval['ytrue'],df_test['ypred'])
@@ -156,7 +156,7 @@ def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
     df_trainval['yprob'] = ypred_cal2
     return df_test,df_trainval
 
-def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
+def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True,rootdir='../'):
     """
     Assembles a dataframe with all the ensemble member predictions
     Performs probability calibration so both calibrated (yprob) and uncalibrated
@@ -167,6 +167,7 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
         experiment (str):   descriptor of the experiment to save to dataframe
         metricsfile (str):  filename to save metrics to
         pseudotest (bool):  flag to assemble pseudotest or test results
+        rootdir (str):      root dir to append when searching for wandb files
 
     Returns:
         df_ensemble (dataframe):    all ensemble predictions for pseudotest/test data
@@ -176,7 +177,7 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
     df_trainval_ensemble = pd.DataFrame()
 
     for run,i in zip(run_ids,range(len(run_ids))):
-        df,df_trainval = calibrate_prob(run,pseudotest=pseudotest)
+        df,df_trainval = calibrate_prob(run,rootdir=rootdir,pseudotest=pseudotest)
         df = df.rename(columns={'ypred':'ypred'+str(i),'yprob':'yprob'+str(i)})
         df_trainval = df_trainval.rename(columns={'ypred':'ypred'+str(i),'yprob':'yprob'+str(i)})
         if len(df_ensemble) == 0:

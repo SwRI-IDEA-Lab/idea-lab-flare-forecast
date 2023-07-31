@@ -22,6 +22,8 @@ model:
   load_checkpoint: false
 testing:
   eval: true
+  savefile: '24h_testa'
+  savedir: ''
 training:
   device: gpu
   batch_size: 256

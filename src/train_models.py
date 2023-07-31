@@ -1,5 +1,6 @@
 # script for running multiple experiments
 import yaml
+from utils.analysis_helper import *
 import train_model
 import os
 
@@ -7,7 +8,7 @@ with open('experiment_config.yml') as config_file:
     config = yaml.safe_load(config_file.read())
 
 highfluxmodels = ['sklmachn','rx977pm1','kdzgw1to','4f3zjhse','huzu3dhw']
-flarefluxmodels = []
+run_ids = []
 
 for i in range(5):
     config['data']['val_split'] = i
@@ -36,3 +37,15 @@ for i in range(5):
         yaml.dump(config,config_file)
 
     train_model.main()
+
+    # save run id
+    run_ids.append(sorted(os.listdir('wandb'))[-1].split('-')[-1])
+
+
+# generate csv with metrics and performance plot
+df,df_trainval = create_ensemble_df(run_ids,'',
+                    config['testing']['savedir']+'/metrics_'+config['testing']['savefile'],
+                    rootdir='',pseudotest=False)
+sns.set_theme(context='paper',style='whitegrid')
+plot_performance(df,nbins=8)
+plt.savefig(config['testing']['savedir']+'/'+config['testing']['savefile']+'_performance.png',dpi=300)
