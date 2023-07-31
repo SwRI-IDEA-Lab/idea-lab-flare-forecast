@@ -66,9 +66,10 @@ def main():
 
     # load checkpoint
     if wandb.run.resumed:
-        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',model)
+        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/model-'+config.meta['id']+':latest',model)
     elif config.model['load_checkpoint']:
-        classifier = load_model(run, config.model['checkpoint_location'], model, strict=False)
+        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/'+config.model['checkpoint_location'], 
+                                model, strict=False)
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
@@ -92,7 +93,7 @@ def main():
     # test trained model
     if config.testing['eval']:
         # load best checkpoint
-        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
+        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/model-'+run.id+':best_k', model)
 
         # save predictions locally
         print('------Train/val predictions------')

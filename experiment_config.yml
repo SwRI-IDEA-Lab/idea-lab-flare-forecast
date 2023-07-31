@@ -15,6 +15,7 @@ meta:
   id: None
   project: flare-forecast
   resume: false
+  user: kierav
 model:
   checkpoint_location: None
   dropout_ratio: 0
