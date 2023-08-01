@@ -45,7 +45,7 @@ class Indexer:
         self.new_dir = Path(save_dir)/self.data
         if not os.path.exists(self.new_dir):
             os.mkdir(self.new_dir)
-        self.file = index_dir +'/index_'+data+'smoothed.csv'
+        self.file = index_dir +'/index_'+data+'.csv'
         self.metadata_cols = metadata_cols
         self.nworkers = nworkers
 

@@ -1,10 +1,10 @@
 # set up download parameters
 email: 'kiera.vds@gmail.com'
-start_date: '2011-01-01'
-end_date: '2011-01-02'
+start_date: '2010-01-01'
+end_date: '2010-12-31'
 wavelength: 171
-instrument_download: []
-instrument_process: ['HMI', 'MDI', '512','SPMG', 'MWO'] 
+instrument_download: ['HMI','MDI']
+instrument_process: ['HMI','MDI'] 
 save_dir: 'Data'   # where to save data
 cadence: '1d'      # desired cadence (much less than 1 day may require
 format: 'fits'

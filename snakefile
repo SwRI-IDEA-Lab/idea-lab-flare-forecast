@@ -23,7 +23,7 @@ rule download:
 
 rule indexandclean:
     wildcard_constraints:
-        instrument = "^[^_]*$"
+        instrument = "[MHS5mhs].*"
     input:
         "{savedir}/{instrument}/"
     output:
@@ -35,7 +35,6 @@ rule mergeindices:
     input:
         ["{sd}/index_{instrument}.csv".format(sd=config['save_dir'],instrument=instrument) for instrument in config['instrument_process']]
     output:
-        # "{savedir}/index_"+'_'.join(config['instrument_process'])+'.csv'
         "{savedir}/index_all_smoothed.csv"
     run:
         from src.data_preprocessing.index_clean_magnetograms import merge_indices_by_date
