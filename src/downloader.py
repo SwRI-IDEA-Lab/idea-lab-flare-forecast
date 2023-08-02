@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import os
+import time
 import drms
 import argparse
 
@@ -62,7 +63,7 @@ class Downloader:
         Returns:
             jsocString
         '''
-        jsocString = f"[{sdate.isoformat()}-{edate.isoformat()}@{self.cadence}]"
+        jsocString = f"[{datetime.datetime.strftime(sdate,'%Y.%m.%d_%H:%M:%S')}-{datetime.datetime.strftime(edate,'%Y.%m.%d_%H:%M:%S')}@{self.cadence}]"
 
         if(self.instrument == 'aia'):
             if(self.wavelength in [94, 131, 171, 193, 211, 304, 335]):
@@ -110,16 +111,52 @@ class Downloader:
             export_request: (panda.df)
                 Dataframe with the number of files to download
         '''
+
+        # download each year separately to limit number of files
         for year in range(self.sdate.year,self.edate.year+1):
             start = np.max([self.sdate,datetime.date(year,1,1)])
             end = np.min([self.edate,datetime.date(year+1,1,1)])
             jsocString = self.assembleJsocString(start,end)
+            t0 = time.time()
+
+            print('     Running the export command for ',jsocString,'...')
             export_request = self.client.export(jsocString, protocol = self.format, method='url')
 
             out_path = os.path.join(self.path,str(year))
             if not os.path.exists(out_path):
                 os.mkdir(out_path)
-            self.export = export_request.download(out_path, 0)
+
+            # loop to wait for query to go through
+            while True:
+                try: 
+                    if export_request.status == 2 and export_request.id != None:
+                        export_request.wait(timeout=20*60)
+                        break
+                    time.sleep(10)
+                except:
+                    time.sleep(10)
+                if time.time()-t0 > 20*60:
+                    print('Failed to export query after 20 min...')
+                    break
+
+            # check status
+            status = export_request.status
+            print("     client.export.status = ",status)
+            if status != 0:
+                print("*********** DRMS error for",self.instrument, "year", year)
+                break
+            print("         Export request took ", time.time() - t0, ' seconds')
+
+            # Download the files
+            t1 = time.time()
+
+            print('\nRequest URL: %s' % export_request.request_url)
+            if '%s' % export_request.request_url != 'None':
+                print('%d file(s) available for download.\n' % len(export_request.urls))
+            print("     Running the download command...")
+
+            self.export = export_request.download(out_path, verbose=False)
+            print("          Download took: ", time.time() - t1, "seconds")
 
         return self.export
 

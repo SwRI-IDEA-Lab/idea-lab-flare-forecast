@@ -10,14 +10,14 @@ import os
 class DownloaderTest(unittest.TestCase):
 
     def setUp(self): 
-        email = 'amunozj@boulder.swri.edu'
+        email = 'kiera.vds@gmail.com'
         sdate = '2010-12-21' # '2023-02-14'
-        edate = '2010-12-22' # '2023-02-14'
+        edate = '2010-12-25' # '2023-02-14'
         wavelength = 171
         instrument = "hmi"
         cadence = '12h'
         format = 'fits'
-        path ='Data/HMI'
+        path ='Data/test_HMI'
         downloadLimit = 10
         self.downloader = Downloader(email, sdate, edate, wavelength, instrument, cadence, format, path, downloadLimit)
         self.downloader.assembleJsocString(self.downloader.sdate, self.downloader.edate)
