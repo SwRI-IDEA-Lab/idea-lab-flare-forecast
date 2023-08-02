@@ -14,7 +14,7 @@ class LabelingTest(unittest.TestCase):
 
     def setUp(self):
         self.goes_dir = '/home/kvandersande/sunpy/data/goes/'
-        self.sample_time = datetime(2010,1,1,5)
+        self.sample_time = datetime(2020,1,1,0)
         self.windows=[24,48]
         self.flare_filename = 'Data/hek_flare_catalog.csv'
         self.flare_catalog = pd.read_csv(self.flare_filename)

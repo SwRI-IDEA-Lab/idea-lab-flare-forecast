@@ -134,12 +134,16 @@ class Labeler():
         """
         goes_files = glob.glob(self.goes_dir+str(sample_time.year)+'/**'+datetime.strftime(sample_time,'%y%m%d')+'**')
         for i in range(int(np.ceil(max(self.flare_windows)/24))):
-            sample_time_next = sample_time+timedelta(days=i)
+            sample_time_next = sample_time+timedelta(days=i+1)
             goes_files.extend(glob.glob(self.goes_dir+str(sample_time_next.year)+'/**'+datetime.strftime(sample_time_next,'%y%m%d')+'**'))
         if len(goes_files) == 0:
             return []
-        goes_ts = ts.TimeSeries(goes_files,concatenate=True).to_dataframe()
-        goes_ts = goes_ts[(goes_ts.index <= sample_time+timedelta(hours=max(self.flare_windows))) & (goes_ts.index>sample_time)]
+        try:
+            goes_ts = ts.TimeSeries(goes_files,concatenate=True).to_dataframe()
+            goes_ts = goes_ts[(goes_ts.index <= sample_time+timedelta(hours=max(self.flare_windows))) & (goes_ts.index>sample_time)]
+        except:
+            print('Error on ',sample_time)
+            return []
         return goes_ts
     
 
