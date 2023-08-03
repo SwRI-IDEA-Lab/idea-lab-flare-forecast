@@ -1,5 +1,6 @@
 # idea-lab-flare-forecast
-Flare forecasting code
+
+Probabilistic flare forecasting on single time-frame historical magnetograms.
 
 To set up the environment using conda, run the following:  
 
