@@ -39,7 +39,8 @@ def save_preds(preds,dir,fname):
         file.extend(predbatch[0])
         ytrue.extend(np.array(predbatch[1]).flatten())
         ypred.extend(np.array(predbatch[2]).flatten())
-    print_metrics(np.array(ypred),np.array(ytrue),True)
+    if len(ytrue)>0:  # no metrics if no data
+        print_metrics(np.array(ypred)[:],np.array(ytrue)[:],True)
     df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
     df.to_csv(dir+os.sep+fname,index=False)
     wandb.save(fname)

@@ -29,7 +29,8 @@ Clr = ['#004A98',
 
 def print_metrics(ypred,y,printresults=False):
     """
-    Calculate metrics based on predictions
+    Calculate metrics based on predictions. If there are no postive true
+    labels, then will return NaNs
     
     Parameters:
         ypred (np array):       array of predicted probabilities
@@ -40,17 +41,24 @@ def print_metrics(ypred,y,printresults=False):
         results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
                                 std, pos mean, pos_std, neg mean, neg_std, max output)
     """
+
     mse = (sum((ypred-y)**2))/len(ypred)
-    bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
-    aps = average_precision_score(y,ypred)
-    gini = 2*roc_auc_score(y,ypred)-1
-    ece,mce = reliability_diag(y,ypred,None,None,plot=False)
     std = np.std(ypred)
     pos_mean = np.mean(ypred[y==1])
     pos_std = np.std(ypred[y==1])
     neg_mean = np.mean(ypred[y==0])
     neg_std = np.std(ypred[y==0])
     max_output = np.max(ypred)
+
+    if sum(y) == 0: # no positive data, return null results
+        print('No positive events in dataset, returning NaNs for some results')
+        bss = aps = gini = ece = mce = np.NaN
+    else:
+        bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
+        aps = average_precision_score(y,ypred)
+        gini = 2*roc_auc_score(y,ypred)-1
+        ece,mce = reliability_diag(y,ypred,None,None,plot=False)
+    
     results = [mse,bss,aps,gini,ece,mce,std,pos_mean,pos_std,neg_mean,neg_std,max_output]
     if printresults:
         print('MSE, BSS, APS, Gini, ECE, MCE, std, pos mean, pos_std, neg mean, neg_std, max output')
