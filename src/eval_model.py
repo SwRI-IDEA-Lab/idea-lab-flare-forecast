@@ -23,7 +23,6 @@ def main():
     with open('experiment_config.yml') as config_file:
         config = yaml.safe_load(config_file.read())
 
-    test = config.data['test']
     
     # load config from specified wandb run
     run = wandb.init(project=config['meta']['project'],resume='must',id=config['meta']['id'])
@@ -31,6 +30,7 @@ def main():
 
     dim = config.data['dim']
     batch = config.training['batch_size']
+    test = config.data['test']
 
     # set seeds
     pl.seed_everything(42,workers=True)
