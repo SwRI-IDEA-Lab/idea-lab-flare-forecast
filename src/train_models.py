@@ -43,6 +43,9 @@ for i in range(5):
 
 
 # generate csv with metrics and performance plot
+if not os.path.exists(config['testing']['savedir']):
+    os.makedirs(config['testing']['savedir'])
+
 df,df_trainval = create_ensemble_df(run_ids,'',
                     config['testing']['savedir']+'/metrics_'+config['testing']['savefile'],
                     rootdir='',pseudotest=False)
