@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.calibration import calibration_curve
-from sklearn.metrics import average_precision_score,roc_auc_score,roc_curve,confusion_matrix,precision_recall_curve
+from sklearn.metrics import average_precision_score,roc_auc_score,roc_curve,confusion_matrix,precision_recall_curve,r2_score
 from src.probability_calibration import probability_calibration
 import seaborn as sns
 from sunpy import timeseries as ts
@@ -54,6 +54,30 @@ def print_metrics(ypred,y,printresults=False):
     results = [mse,bss,aps,gini,ece,mce,std,pos_mean,pos_std,neg_mean,neg_std,max_output]
     if printresults:
         print('MSE, BSS, APS, Gini, ECE, MCE, std, pos mean, pos_std, neg mean, neg_std, max output')
+        print(results)
+    return results
+
+def print_regression_metrics(ypred,y,printresults=False):
+    """
+    Calculate metrics based on regression predictions
+    
+    Parameters:
+        ypred (np array):       array of predicted outputs
+        y (np array):           corresponding true outputs (1 - event, 0 - no event)
+        printresults (bool):    flag to print out results or 
+    
+    Returns:
+        results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
+                                std, pos mean, pos_std, neg mean, neg_std, max output)
+    """
+    mse = (sum((ypred-y)**2))/len(ypred)
+    bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
+    mae = sum(abs(ypred-y))/len(ypred)
+    r2 = r2_score(y,ypred)
+
+    results = [mse,bss,mae,r2]
+    if printresults:
+        print('MSE, BSS, MAE, R2')
         print(results)
     return results
 
