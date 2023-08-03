@@ -23,7 +23,7 @@ model:
 testing:
   eval: true
   savefile: '24h_testa'
-  savedir: ''
+  savedir: 'results'
 training:
   device: gpu
   batch_size: 256
