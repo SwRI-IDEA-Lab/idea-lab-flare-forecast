@@ -10,6 +10,7 @@ cadence: '1d'      # desired cadence (much less than 1 day may require
 format: 'fits'
 dlim: 1000
 newdir: 'Data/hdf5_smoothed'
+nworkers: 8
 
 # set up labeling parameters
 forecast_windows: '12 24 48' #'24''48'

@@ -29,7 +29,7 @@ rule indexandclean:
     output:
         "{savedir}/index_{instrument}.csv"
     shell:
-        "python src/data_preprocessing/index_clean_magnetograms.py {wildcards.instrument} -r {config[save_dir]} -n {config[newdir]}"
+        "python src/data_preprocessing/index_clean_magnetograms.py {wildcards.instrument} -r {config[save_dir]} -n {config[newdir]} -w {config[nworkers]}"
 
 rule mergeindices:
     input:
