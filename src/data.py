@@ -97,8 +97,21 @@ class MagnetogramDataSet(Dataset):
                 List:           Filename, magnetogram image array, and label
         """
         filename = self.name_frame.iloc[idx]
-        img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
-        img = np.nan_to_num(img)
+        if self.name != 'filename':
+            # embedding is in shape (dim x dim x channels)
+            img = np.load('../solar-similarity-search/'+filename).astype(np.float32)
+            img = img/self.maxval
+        else:
+            img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
+            img = np.nan_to_num(img)
+
+            # Normalize magnetogram data
+            # clip magnetogram data within max value
+            img[np.where(img>self.maxval)] = self.maxval
+            img[np.where(img<-self.maxval)] = -self.maxval
+            # scale between -1 and 1
+            img = img/self.maxval
+
         label = self.label_frame.iloc[idx]
         features = torch.Tensor(self.features.iloc[idx])
 
@@ -184,10 +197,15 @@ class MagnetogramDataModule(pl.LightningDataModule):
         # define high flux based on total unsigned flux threshold (for pretraining)
         self.df['high_flux'] = (self.df['tot_us_flux'] >= self.flux_thresh).astype(int)
         # define flare label based on desired forecast window
-        self.df['flare'] = (self.df['flare_intensity_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
-        # define label based on linear relationship between flare intensity and flux
-        self.df['flare_flux'] = ((self.df['flare_intensity_in_'+str(self.forecast_window)+'h']==0) & self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['flare_intensity_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
-        self.df['flare_flux'] = self.df['flare_flux'].astype(int)
+        # self.df['flare'] = (self.df['xrsb_max_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
+        self.df['flare'] = self.df['xrsb_max_in_'+str(self.forecast_window)+'h']
+        self.df.loc[self.df['sample_time']<datetime(2001,3,1),'flare'] =  self.df.loc[self.df['sample_time']<datetime(2001,3,1),'flare']/0.7
+        self.df['flare'] = (np.log10(self.df['flare'])+8.5)/6
+        self.df.loc[self.df['flare']<0,'flare'] = 0
+        self.df = self.df.dropna(axis=0,subset='flare')
+        # # define label based on linear relationship between flare intensity and flux
+        # self.df['flare_flux'] = ((self.df['flare_intensity_in_'+str(self.forecast_window)+'h']==0) & self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['flare_intensity_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
+        # self.df['flare_flux'] = self.df['flare_flux'].astype(int)
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
@@ -219,12 +237,12 @@ class MagnetogramDataModule(pl.LightningDataModule):
               'Valid:',len(self.val_set),
               'Pseudo-test:',len(self.pseudotest_set),
               'Test:',len(self.test_set))
-        self.train_p = sum(df_train[self.label]==1)
-        self.train_n = sum(df_train[self.label]==0)
-        print('P/N ratio in training:',sum(df_train[self.label]==1),sum(df_train[self.label]==0))
-        print('P/N ratio in validation:',sum(df_val[self.label]==1),sum(df_val[self.label]==0))
-        print('P/N ratio in pseudotest:',sum(df_pseudotest[self.label]==1),sum(df_pseudotest[self.label]==0))
-        print('P/N ratio in test:',sum(df_test[self.label]==1),sum(df_test[self.label]==0))
+        self.train_p = sum(df_train[self.label]>3.5/6)
+        self.train_n = sum(df_train[self.label]<=3.5/6)
+        print('P/N ratio in training:',sum(df_train[self.label]>3.5/6),sum(df_train[self.label]<=3.5/6))
+        print('P/N ratio in validation:',sum(df_val[self.label]>3.5/6),sum(df_val[self.label]<=3.5/6))
+        print('P/N ratio in pseudotest:',sum(df_pseudotest[self.label]>3.5/6),sum(df_pseudotest[self.label]<=3.5/6))
+        print('P/N ratio in test:',sum(df_test[self.label]>3.5/6),sum(df_test[self.label]<=3.5/6))
 
     def train_dataloader(self):
         return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4,shuffle=True)

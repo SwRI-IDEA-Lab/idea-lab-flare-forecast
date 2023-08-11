@@ -63,21 +63,20 @@ def print_regression_metrics(ypred,y,printresults=False):
     
     Parameters:
         ypred (np array):       array of predicted outputs
-        y (np array):           corresponding true outputs (1 - event, 0 - no event)
+        y (np array):           corresponding true outputs 
         printresults (bool):    flag to print out results or 
     
     Returns:
         results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
                                 std, pos mean, pos_std, neg mean, neg_std, max output)
     """
-    mse = (sum((ypred-y)**2))/len(ypred)
-    bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
-    mae = sum(abs(ypred-y))/len(ypred)
-    r2 = r2_score(y,ypred)
+    mse = (sum((ypred*6-y*6)**2))/len(ypred)
+    mae = sum(abs(ypred*6-y*6))/len(ypred)
+    r2 = r2_score(y*6,ypred*6)
 
-    results = [mse,bss,mae,r2]
+    results = [mse,mae,r2]
     if printresults:
-        print('MSE, BSS, MAE, R2')
+        print('MSE, MAE, R2')
         print(results)
     return results
 

@@ -8,6 +8,8 @@ with open('experiment_config.yml') as config_file:
 
 highfluxmodels = ['sklmachn','rx977pm1','kdzgw1to','4f3zjhse','huzu3dhw']
 flarefluxmodels = []
+windows = [1,6,12,24]
+val_splits = 5
 
 for i in range(5):
     config['data']['val_split'] = i
@@ -23,16 +25,16 @@ for i in range(5):
     
     train_model.main()
 
-    # # obtain run id and run train
-    last_run = sorted(os.listdir('wandb'))[-1]
-    run_id = last_run.split('-')[-1]
-    # run_id = highfluxmodels[i]
-    config['data']['label'] = 'flare'
-    config['data']['augmentation'] = 'conservative'
-    config['model']['checkpoint_location'] = 'kierav/flare-forecast/model-'+run_id+':best_k'
-    config['model']['load_checkpoint'] = True
-    config['testing']['eval'] = True
-    with open('experiment_config.yml','w') as config_file:
-        yaml.dump(config,config_file)
+        # # obtain run id and run train
+        # last_run = sorted(os.listdir('wandb'))[-1]
+        # run_id = last_run.split('-')[-1]
+        # run_id = highfluxmodels[i]
+        config['data']['label'] = 'flare'
+        # config['data']['augmentation'] = 'conservative'
+        # config['model']['checkpoint_location'] = 'kierav/flare-forecast-embeddings/model-'+run_id+':best_k'
+        # config['model']['load_checkpoint'] = True
+        config['testing']['eval'] = True
+        with open('experiment_config.yml','w') as config_file:
+            yaml.dump(config,config_file)
 
-    train_model.main()
+        train_model.main()
