@@ -82,6 +82,7 @@ class MagnetogramDataSet(Dataset):
         self.dataset_frame = df.loc[:,'dataset']
         self.transform = transform
         self.features = df.loc[:,feature_cols]
+        self.maxval=1000
 
     def __len__(self):
         return len(self.name_frame)
