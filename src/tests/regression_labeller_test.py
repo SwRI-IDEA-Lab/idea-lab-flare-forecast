@@ -14,7 +14,7 @@ class LabelingTest(unittest.TestCase):
 
     def setUp(self):
         self.goes_dir = '/home/kvandersande/sunpy/data/goes/'
-        self.sample_time = datetime(2020,1,1,0)
+        self.sample_time = datetime(2010,1,1,0)
         self.windows=[24,48]
         self.flare_filename = 'Data/hek_flare_catalog.csv'
         self.flare_catalog = pd.read_csv(self.flare_filename)
@@ -37,6 +37,12 @@ class LabelingTest(unittest.TestCase):
         nolabel = self.labeler.add_regression_data([],self.sample_time,self.windows[0])
         self.assertTrue(np.isnan(nolabel))
 
+    def test_labelYear(self):
+        labels = self.labeler.label_year(self.sample_time.year)
+        print(labels[:5],len(labels))
+        self.assertIsInstance(labels,list)
+        self.assertLessEqual(len(labels),365)
+        
     def test_labellerExists(self):
         self.assertIsNotNone(self.labeler)
         self.assertIsInstance(self.labeler.samples,pd.DataFrame)
@@ -46,6 +52,8 @@ class LabelingTest(unittest.TestCase):
         self.assertEqual(np.sum(self.labeler.samples.duplicated(subset='date')),0)
         start_date = int(datetime.strftime(self.labeler.flares['start_time'][0]-timedelta(hours = max(self.labeler.flare_windows)),'%Y%m%d'))
         self.assertEqual(np.sum(self.labeler.samples['date']<start_date),0)
+        self.assertTrue(self.labeler.samples['year'].dtypes == int)
+
 
     def test_parser(self):
         parser = parse_args([self.index_file,self.out_file,'-w 12'])

@@ -8,12 +8,89 @@ import pandas as pd
 import argparse
 from datetime import datetime,timedelta
 import csv
+import matplotlib.pyplot as plt
+from multiprocessing import Pool
+import scipy as sp
 from src.data_preprocessing.helper import read_catalog, add_label_data, calculate_flaring_rate
 from sunpy import timeseries as ts
+import time
+
+def fix_artifacts(goes_ts):
+    # fix values for detecting artifacts
+    deriv_max = 1.5/3
+    deriv_min = -1/3
+    thresh_min = -7.8
+    thresh_max = -3.5
+    diff_normal = 0.3
+    tback = 120
+
+    dt = np.median((goes_ts.index[1:]-goes_ts.index[:-1]).total_seconds())
+
+    size_filt = np.min([int(np.floor(12/dt)),12])
+    origin_filt =int(np.floor((size_filt-1)/2))
+
+    goes_ts_new = np.log10(sp.ndimage.median_filter(goes_ts['xrsb'].copy(),size_filt,origin=origin_filt))
+    goes_ts_new[np.isnan(goes_ts_new)] = np.nanmin(goes_ts_new)
+
+    mask = np.zeros(len(goes_ts_new))
+
+    # backwards differences to estimate derivatives
+    ts_diff = np.diff(goes_ts_new,prepend=goes_ts_new[0])/dt
+    ts_diff2 = np.diff(goes_ts_new,prepend=[goes_ts_new[0],goes_ts_new[0]])
+
+    # find critical points
+    inds_start = np.where(((ts_diff>deriv_max)&(goes_ts_new>thresh_max))|((goes_ts_new<thresh_min)&(ts_diff<0)))[0]
+
+    inds_further=0
+    for ind in inds_start:
+        if (ind < inds_further) | (ind == 0):
+            continue
+
+        if (goes_ts_new[ind]<thresh_min):
+            # if np.median(goes_ts_new[np.max([ind-30*60*24*20,0]):ind])<thresh_min:
+            #     # all recent data is low noise, so ignore
+            #     continue
+            # look for previous inflection point
+            ind = np.argmin(ts_diff2[np.max([ind-tback,0]):ind]) + np.max([ind-tback,0]) - 1
+            # if too far from local median then just pick closest point to median
+            if np.abs(goes_ts_new[ind-1]-np.median(goes_ts_new[np.max([0,ind-12000]):ind-1])) > 0.2*np.median(goes_ts_new[np.max([0,ind-12000]):ind-1]):
+                ind = np.argmin(np.abs(goes_ts_new[np.max([ind-tback,0]):ind]-np.median(goes_ts_new[np.max([0,ind-12000]):ind])))+np.max([ind-tback,0])+1 
+
+        elif (goes_ts_new[ind]>thresh_max):
+            # look for previous inflection point
+            ind = np.argmax(ts_diff2[np.max([ind-tback,0]):ind]) + np.max([ind-tback,0]) - 1
+            # if too far from local median then just pick closest point to median
+            if np.abs(goes_ts_new[ind-1]-np.median(goes_ts_new[np.max([0,ind-12000]):ind-1])) > 0.2*np.median(goes_ts_new[np.max([0,ind-12000]):ind-1]):
+                ind = np.argmin(np.abs(goes_ts_new[np.max([ind-tback,0]):ind]-np.median(goes_ts_new[np.max([0,ind-12000]):ind])))+np.max([ind-tback,0])+1 
+
+        # last normal value
+        y_last = goes_ts_new[ind-1]
+        # if there are more critical values in the next 30 minutes then search after them
+        inds_further = np.max(np.append(inds_start[(goes_ts.index[inds_start]-goes_ts.index[ind])<=timedelta(minutes=30)],ind))
+        # find next normal value
+        ind_next = np.where(np.abs(goes_ts_new[inds_further:]-y_last)<diff_normal)
+        # handle case where no normal values 
+        if len(ind_next[0])==0:
+            goes_ts_new[ind:] = goes_ts_new[ind-1]
+            mask[ind:] = 1
+            break
+        ind_next = ind_next[0][0]+inds_further
+        # handle case where nothing to interpolate
+        if ind_next == ind:
+            continue
+
+        # linearly interpolate between last and next normal value
+        goes_ts_new[ind:ind_next] = goes_ts_new[ind-1]+(goes_ts_new[ind_next]-goes_ts_new[ind-1])*(goes_ts.index[ind:ind_next]-goes_ts.index[ind-1])/(goes_ts.index[ind_next]-goes_ts.index[ind-1])
+        # set mask
+        mask[ind:ind_next] = 1
+
+    mask = mask>0
+
+    return goes_ts_new,mask,inds_start
 
 class Labeler():
     def __init__(self,index_file:str = None,out_file:str = None,flare_catalog:str = None,
-                 flare_windows:list=[24],goes_dir:str='Data/goes/'):
+                 flare_windows:list=[24],goes_dir:str='Data/goes/',nworkers:int=8):
         """
         Initialize a labeling class to select best available data and add flare labels
 
@@ -26,12 +103,15 @@ class Labeler():
         self.flare_windows = flare_windows   
         self.file = out_file
         self.goes_dir = goes_dir
+        self.nworkers = nworkers
 
         # read in flare catalog
         self.flares = read_catalog(flare_catalog)
 
         # read in index file
         self.samples = read_catalog(index_file,na_values=' ')
+        self.samples['year'] = self.samples['date'].astype(str).str[:4].astype(int)
+
         # drop samples with the same date, keeping the first entry
         self.samples.drop_duplicates(subset='date',keep='first',ignore_index=True,inplace=True)
 
@@ -47,7 +127,7 @@ class Labeler():
         """
         # header columns
         header_row = ['filename','sample_time','dataset']
-        cols = [col.rstrip('_MDIHWOSPG512') for col in self.samples.columns if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','timestamp','t_obs']]
+        cols = [col.rstrip('_MDIHWOSPG512') for col in self.samples.columns if not col.rstrip('_MDIHWOSPG512') in ['filename','fits_file','date','year','timestamp','t_obs']]
         cols = list(dict.fromkeys(cols))  # filter only unique values
         header_row.extend(cols)
         header_row.extend(['flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h'])
@@ -69,20 +149,60 @@ class Labeler():
         out_file = open(self.file,'a')
         out_writer = csv.writer(out_file,delimiter=',')
 
-        for i in self.samples.index:
-            sample = self.samples.iloc[i]
-            file_data = self.generate_file_data(sample)
-            out_writer.writerow(file_data)
+        # label each year
+        # for year in pd.unique(self.samples['year']):
+
+        #         out_writer.writerow(file_data)
+
+        t0 = time.time()
+        years = pd.unique(self.samples['year'])
+        years = np.arange(2015,2023,1)
+        years = np.insert(years,0,2009)
+        years = np.insert(years,1,2010)
+
+        with Pool(self.nworkers) as pool:
+            for result in pool.map(self.label_year,years):
+                out_writer.writerows(result) 
 
         out_file.close()
-    
-    def generate_file_data(self,sample):
+        t1 = time.time()
+        print('Finished labeling',years[0],'-',years[-1],'in',(t1-t0)/60,'minutes')
+
+    def label_year(self,year):
+        """
+        Label a year of samples
+        
+        Parameters:
+            year (int)       to be labeled
+        
+        Returns:
+            labels (list)    label data for all samples in year
+        """
+        year_samples = self.samples[self.samples['year']==year]
+        print('Generating labels for',len(year_samples),'samples in',year)
+
+        goes_ts = self.retrieve_goes_year_data(year)
+        no_year_data = False
+        if len(goes_ts) == 0:
+            no_year_data = True
+            print('No year data for',year)
+        labels = []
+        for i in year_samples.index:
+            sample = self.samples.iloc[i]
+            if no_year_data:   # error obtaining timeseries for whole year so just find local timeseries
+                goes_ts = self.retrieve_goes_data(datetime.strptime(str(sample['date']),'%Y%m%d'))
+            file_data = self.generate_file_data(sample,goes_ts)
+            labels.append(file_data)
+        return labels
+
+
+    def generate_file_data(self,sample,goes_ts):
         """
         For a given data sample, generates list of information for labels file
 
         Parameters:
             sample:     pandas series with filenames and times for this days sample
-
+            goes_ts:    pandas dataframe containing GOES timeseries data
         Returns:
             file_data:  list of data to write to labels file for this sample
         """
@@ -116,11 +236,55 @@ class Labeler():
                 file_data.append(flare_data['intensity'].max())
 
         # add flare labels for each forecast window
-        goes_ts = self.retrieve_goes_data(sample_time)
+        # goes_ts = self.retrieve_goes_data(sample_time)
+        if len(goes_ts) == 0:
+            goes_ts_sample = []
+        else:
+            goes_ts_sample = goes_ts[(goes_ts.index>sample_time)&(goes_ts.index<=sample_time+timedelta(hours=max(self.flare_windows)))]
+
         for window in self.flare_windows:
-            file_data.append(self.add_regression_data(goes_ts,sample_time,window))
+            file_data.append(self.add_regression_data(goes_ts_sample,sample_time,window))
 
         return file_data
+    
+    def retrieve_goes_year_data(self,year):
+        """
+        Retrieve and clean GOES data for year plus days (up to max flare window)
+        
+        Parameters:
+            year (int)      desired year
+
+        Returns:
+            goes_ts (dataframe):        GOES sunpy timeseries 
+        """
+
+        goes_files = glob.glob(self.goes_dir+str(year)+'/**')
+        for i in range(int(np.ceil(max(self.flare_windows)/24))):
+            sample_time_next = datetime(year+1,1,i+1)
+            goes_files.extend(glob.glob(self.goes_dir+str(year+1)+'/**'+datetime.strftime(sample_time_next,'%y%m%d')+'**'))
+        if len(goes_files) == 0:
+            return []
+        try:
+            goes_ts = ts.TimeSeries(goes_files,concatenate=True).to_dataframe()
+        except:
+            print('Error on ',year)
+            return []
+
+        # clean all GOES data
+        goes_ts.loc[goes_ts['xrsb']<2e-9,'xrsb'] = np.nan
+        goes_ts.fillna(method='ffill',inplace=True)
+        goes_ts.fillna(method='bfill',inplace=True)
+        goes_ts_new,_,inds_start = fix_artifacts(goes_ts)
+        goes_ts['xrsb_clean'] = 10**goes_ts_new
+
+        plt.figure(figsize=(12,3))
+        plt.plot(goes_ts.index,goes_ts['xrsb'])
+        plt.plot(goes_ts.index,10**goes_ts_new)
+        plt.plot(goes_ts.index[inds_start],goes_ts['xrsb'][inds_start],'*')
+        plt.yscale('log')
+        plt.savefig(str(year)+'_goes.png')
+
+        return goes_ts
     
     def retrieve_goes_data(self,sample_time):
         """
@@ -144,6 +308,17 @@ class Labeler():
         except:
             print('Error on ',sample_time)
             return []
+        
+        # clean all GOES data
+        if len(goes_ts) == 0:
+            return []
+        
+        goes_ts.loc[goes_ts['xrsb']<2e-9,'xrsb'] = np.nan
+        goes_ts.fillna(method='ffill',inplace=True)
+        goes_ts.fillna(method='bfill',inplace=True)
+        goes_ts_new,_,_ = fix_artifacts(goes_ts)
+        goes_ts['xrsb_clean'] = 10**goes_ts_new
+
         return goes_ts
     
 
@@ -162,7 +337,8 @@ class Labeler():
         if len(goes_ts) == 0:
             return np.nan
         
-        return goes_ts[goes_ts.index<=sample_time+timedelta(hours=window)]['xrsb'].max()
+        goes_max = goes_ts['xrsb_clean'][goes_ts.index<=sample_time+timedelta(hours=window)].max()
+        return np.float32(goes_max)
         
 
 def parse_args(args=None):
