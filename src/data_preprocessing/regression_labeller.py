@@ -156,9 +156,6 @@ class Labeler():
 
         t0 = time.time()
         years = pd.unique(self.samples['year'])
-        years = np.arange(2015,2023,1)
-        years = np.insert(years,0,2009)
-        years = np.insert(years,1,2010)
 
         with Pool(self.nworkers) as pool:
             for result in pool.map(self.label_year,years):
@@ -366,6 +363,10 @@ def parse_args(args=None):
                         default=[12,24,48],
                         help='forecast windows for labeling, in hours'
                         )
+    parser.add_argument('goesdir',
+                        type=str,
+                        help='path to GOES data',
+                        )
 
     return parser.parse_args(args)
 
@@ -374,11 +375,11 @@ def main():
     # parse command line arguments
     parser = parse_args()
     flare_catalog = 'Data/hek_flare_catalog.csv'
-    goes_dir = '/home/kvandersande/sunpy/data/goes/'
 
     # create labeler instance
     labeler = Labeler(parser.index_file, parser.out_file,
-                      flare_catalog,parser.flare_windows,goes_dir=goes_dir)
+                      flare_catalog,parser.flare_windows,
+                      goes_dir=parser.goes_dir)
     labeler.write_header()
     labeler.label_data()
 
