@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 import torchmetrics
 
-class convnet_sc(nn.Module):
+class convnet_sc_regressor(nn.Module):
     """ 
     Single stream conv net to ingest full-disk magnetograms based on Subhamoy Chatterjee's architecture
 
@@ -51,12 +51,11 @@ class convnet_sc(nn.Module):
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
-            nn.Sigmoid(),
+            # nn.ReLU(inplace=True),
         )
         
         self.fcl2 = nn.Sequential(
             nn.Linear(1+len_features,1),
-            nn.Sigmoid()
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -104,7 +103,7 @@ class convnet_sc(nn.Module):
         # x = self.fcl2(x)
         return x
     
-class convnet_mini(nn.Module):
+class convnet_mini_regressor(nn.Module):
     """ 
     Single stream conv net with 2 convolutional layers and 2 fully connected layers to ingest assembled embeddings
 
@@ -132,7 +131,6 @@ class convnet_mini(nn.Module):
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
             nn.Linear(100,1),
-            nn.Sigmoid(),
         )
         
         self.fcl2 = nn.Sequential(
@@ -185,70 +183,7 @@ class convnet_mini(nn.Module):
         # x = self.fcl2(x)
         return x
 
-class mlp(nn.Module):
-    """ 
-    2 fully connected layers to ingest assembled embeddings
-
-    Parameters:
-        dim (int):    square dimension of input image
-        length (int): number of images in a sequence
-        dropoutRatio (float):   percentage of disconnections for Dropout
-
-    """
-    def __init__(self, dim:int=16, length:int=16, len_features:int=0, weights=[], dropoutRatio:float=0.0):
-        super().__init__()
-
-        self.fcl = nn.Sequential(
-            nn.LazyLinear(100),
-            nn.ReLU(inplace=True),
-            nn.Dropout1d(dropoutRatio),
-            nn.Linear(100,1),
-            nn.Sigmoid(),
-        )
-        
-        self.fcl2 = nn.Sequential(
-            nn.Linear(1+len_features,1),
-            nn.Sigmoid()
-        )
-        
-        self.forward(torch.ones(1,length*dim*dim),torch.ones(1,len_features))
-        self.apply(self._init_weights)
-
-        # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
-        # coeff intercept for LR model on all features [[ 1.35617824  0.5010206  -0.56691345  1.85041399  0.7660414   0.55303976 2.42641335  1.67886773  1.88992678  2.84953033]] [-3.85753394]
-        if len(weights)!=0:
-            with torch.no_grad():
-                self.fcl2[0].weight[0,1:] = torch.Tensor(weights[1:])
-                self.fcl2[0].bias[0] = weights[0]
-
-    def _init_weights(self,module):
-        """
-            Function to check for layer instances within the model and initialize
-            weights and biases.   We are using glorot/xavier uniform for the 2D convolution
-            weights and random normal for the linear layers.  All biases are initilized
-            as zeros.
-        """
-        if isinstance(module,nn.Linear):
-            # nn.init.zeros_(module.weight)
-            nn.init.xavier_normal_(module.weight)
-            module.bias.data.zero_()
-
-        if isinstance(module,nn.LazyLinear):
-            # nn.init.zeros_(module.weight)
-            nn.init.xavier_normal_(module.weight)
-            module.bias.data.zero_()
-
-
-    def forward(self,x,f):
-        x = x.view(x.shape[0],-1)
-        x = self.fcl(x)
-
-        # append features
-        # x = torch.cat([x,f],dim=1)
-        # x = self.fcl2(x)
-        return x
-
-class LitConvNet(pl.LightningModule):
+class LitConvNetRegressor(pl.LightningModule):
     """
         PyTorch Lightning module to classify magnetograms as flaring or non-flaring
 
@@ -266,19 +201,12 @@ class LitConvNet(pl.LightningModule):
         self.epochs = epochs
 
         # define loss function
-        self.loss = nn.BCELoss()   
+        self.loss = nn.MSELoss()   
 
         # define metrics
-        self.train_acc = torchmetrics.Accuracy(task='binary')
-        self.train_f1 = torchmetrics.F1Score(task='binary')
-        self.val_acc = torchmetrics.Accuracy(task='binary')
-        self.val_aps = torchmetrics.AveragePrecision(task='binary')
-        self.val_f1 = torchmetrics.F1Score(task='binary')
         self.val_mse = torchmetrics.MeanSquaredError()
-        self.val_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
-        self.test_acc = torchmetrics.Accuracy(task='binary')
-        self.test_aps = torchmetrics.AveragePrecision(task='binary')
-        self.test_f1 = torchmetrics.F1Score(task='binary')
+        self.val_mae = torchmetrics.MeanAbsoluteError()
+        self.val_r2 = torchmetrics.R2Score()
         self.test_mse = torchmetrics.MeanSquaredError()
         self.test_confusion_matrix = torchmetrics.ConfusionMatrix(task='binary',num_classes=2)
 
@@ -299,12 +227,7 @@ class LitConvNet(pl.LightningModule):
         y_hat = self.model(x,f)
         loss = self.loss(y_hat,y.type_as(y_hat))
 
-        self.train_acc(y_hat,y)
-        self.train_f1(y_hat,y)
-        self.log_dict({'loss':loss,
-                       'train_acc':self.train_acc,
-                       'train_f1':self.train_f1
-                    },
+        self.log_dict({'loss':loss},
                        on_step=False,on_epoch=True)
         return loss
     
@@ -324,34 +247,16 @@ class LitConvNet(pl.LightningModule):
         val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
-        self.val_acc(y_hat,y)
-        self.val_aps(y_hat,y)
-        self.val_f1(y_hat,y)
         self.val_mse(y_hat*6-8.5,y*6-8.5)
-        self.val_confusion_matrix.update(y_hat,y)
+        self.val_mae(y_hat*6-8.5,y*6-8.5)
+        self.val_r2(y_hat,y)
 
         self.log_dict({
                       'val_loss':val_loss,
-                      'val_acc':self.val_acc,
-                      'val_aps':self.val_aps,
-                      'val_f1':self.val_f1,
-                      'val_mse':self.val_mse,},
+                      'val_mse':self.val_mse,
+                      'val_mae':self.val_mae,
+                      'val_r2':self.val_r2},
                       on_step=False,on_epoch=True)
-
-    def validation_epoch_end(self,outputs):
-        """
-        Finish logging validation metrics at end of epoch
-        """
-
-        confusion_matrix = self.val_confusion_matrix.compute()
-        tp = confusion_matrix[1,1].type(torch.FloatTensor)
-        tn = confusion_matrix[0,0].type(torch.FloatTensor)
-        fp = confusion_matrix[0,1].type(torch.FloatTensor)
-        fn = confusion_matrix[1,0].type(torch.FloatTensor)
-        tss = (tp) / (tp + fn) - (fp) / (fp + tn)
-        hss = 2*(tp*tn-fp*fn)/((tp+fp)*(fp+tn)+(tp+fn)*(fn+tn))
-        self.log_dict({'val_TP':tp,'val_TN':tn,'val_FP':fp,'val_FN':fn,'val_tss':tss,'val_hss':hss})
-        self.val_confusion_matrix.reset()
 
 
     def test_step(self,batch,batch_idx):
@@ -368,29 +273,11 @@ class LitConvNet(pl.LightningModule):
         y_hat = self.model(x,f)
 
         # calculate metrics
-        self.test_acc(y_hat,y)
-        self.test_aps(y_hat,y)
-        self.test_f1(y_hat,y)
         self.test_mse(y_hat,y)
         self.test_confusion_matrix.update(y_hat,y)
 
-        self.log_dict({
-                        'test_acc':self.test_acc,
-                        'test_aps':self.test_aps,
-                        'test_f1':self.test_f1,
-                        'test_mse':self.test_mse},
-                        on_step=False,on_epoch=True)
-
-    def test_epoch_end(self,outputs):
-        confusion_matrix = self.test_confusion_matrix.compute()
-        tp = confusion_matrix[1,1].type(torch.FloatTensor)
-        tn = confusion_matrix[0,0].type(torch.FloatTensor)
-        fp = confusion_matrix[0,1].type(torch.FloatTensor)
-        fn = confusion_matrix[1,0].type(torch.FloatTensor)
-        tss = (tp) / (tp + fn) - (fp) / (fp + tn)
-        hss = 2*(tp*tn-fp*fn)/((tp+fp)*(fp+tn)+(tp+fn)*(fn+tn))
-        self.log_dict({'test_TP':tp,'test_TN':tn,'test_FP':fp,'test_FN':fn,'test_tss':tss,'test_hss':hss})
-        self.test_confusion_matrix.reset()
+        self.log_dict({'test_mse':self.test_mse},
+                       on_step=False,on_epoch=True)
 
     def configure_optimizers(self):
         """
