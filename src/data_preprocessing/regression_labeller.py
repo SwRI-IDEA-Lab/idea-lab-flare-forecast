@@ -266,6 +266,9 @@ class Labeler():
         except:
             print('Error on ',year)
             return []
+        
+        # calibrate data before 2001
+        goes_ts.loc[goes_ts.index<datetime(2001,3,1),'xrsb'] = goes_ts.loc[goes_ts.index<datetime(2001,3,1),'xrsb']/0.7
 
         # clean all GOES data
         goes_ts.loc[goes_ts['xrsb']<2e-9,'xrsb'] = np.nan
