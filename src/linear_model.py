@@ -28,8 +28,8 @@ class LinearModel():
     def prepare_data(self):
         # load and prep dataframe
         self.df = pd.read_csv(self.data_file)
-        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'])
-        self.df['flare'] = (self.df['flare_intensity_in_'+str(self.window)+'h']>=self.flare_thresh).astype(int)
+        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'],format='mixed')
+        self.df['flare'] = (self.df['xrsb_max_in_'+str(self.window)+'h']>=self.flare_thresh).astype(int)
 
     def setup(self):
         # split data
@@ -50,7 +50,7 @@ class LinearModel():
         
 
 if __name__ == "__main__":
-    data_file = 'Data/labels_all_smoothed2.csv'
+    data_file = 'Data/labels_regression_cleanedandchecked.csv'
     window = 24
     print('Window: ',window,'h')
 

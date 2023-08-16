@@ -50,12 +50,12 @@ class convnet_sc_regressor(nn.Module):
             nn.LazyLinear(100),
             nn.ReLU(inplace=True),
             nn.Dropout1d(dropoutRatio),
-            nn.Linear(100,1),
+            # nn.Linear(100,1),
             # nn.ReLU(inplace=True),
         )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(1+len_features,1),
+            nn.Linear(100+len_features,1),
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -99,8 +99,8 @@ class convnet_sc_regressor(nn.Module):
         x = self.fcl(x)
 
         # # append features
-        # x = torch.cat([x,f],dim=1)
-        # x = self.fcl2(x)
+        x = torch.cat([x,f],dim=1)
+        x = self.fcl2(x)
         return x
     
 class convnet_mini_regressor(nn.Module):
