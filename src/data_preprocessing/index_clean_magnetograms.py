@@ -45,7 +45,7 @@ class Indexer:
         self.new_dir = Path(save_dir)/self.data
         if not os.path.exists(self.new_dir):
             os.mkdir(self.new_dir)
-        self.file = index_dir +'/index_'+data+'smoothed.csv'
+        self.file = index_dir +'/index_'+data+'.csv'
         self.metadata_cols = metadata_cols
         self.nworkers = nworkers
 
@@ -234,6 +234,11 @@ def parse_args(args=None):
                         default='Data',
                         help='directory to save index file'
                         )
+    parser.add_argument('-w','--workers',
+                        type=int,
+                        default=8,
+                        help='number of cores for parallelization'
+                        )
     return parser.parse_args(args)
 
 
@@ -260,13 +265,14 @@ def main():
     root_dir = parser.root
     new_dir = parser.newdir
     index_dir = parser.indexdir
+    nworkers = parser.workers
 
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
 
     for data in datasets:
         data = data.upper()
-        indexer = Indexer(data,root_dir,new_dir,index_dir,['t_obs'],nworkers=8)
+        indexer = Indexer(data,root_dir,new_dir,index_dir,['t_obs'],nworkers=nworkers)
         indexer.index_data()
 
     if len(datasets)>1:

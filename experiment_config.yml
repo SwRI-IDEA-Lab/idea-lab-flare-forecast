@@ -17,12 +17,15 @@ meta:
   id: None
   project: flare-forecast-regression
   resume: false
+  user: kierav
 model:
   checkpoint_location:  None
   dropout_ratio: 0
   load_checkpoint: false
 testing:
   eval: true
+  savefile: '24h_testa'
+  savedir: 'results'
 training:
   batch_size: 256
   device: gpu

@@ -25,7 +25,7 @@ def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True):
     classifier = litclass.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
     return classifier
 
-def save_preds(preds,dir,fname):
+def save_preds(preds,dir,fname,regression:bool=False):
     """
     Saves model predictions locally and to wandb run
 
@@ -33,6 +33,7 @@ def save_preds(preds,dir,fname):
         preds:      list of model outputs
         dir:        local directory for saving
         fname:      filename to save as
+        regression: if true then regression, else classification
     """
     file = []
     ytrue = []
@@ -41,7 +42,10 @@ def save_preds(preds,dir,fname):
         file.extend(predbatch[0])
         ytrue.extend(np.array(predbatch[1]).flatten())
         ypred.extend(np.array(predbatch[2]).flatten())
-    print_regression_metrics(np.array(ypred),np.array(ytrue),True)
+    if len(ytrue)>0 and not regression:  # no metrics if no data
+        print_metrics(np.array(ypred)[:],np.array(ytrue)[:],True)
+    elif len(ytrue)>0 and regression:  # no metrics if no data
+        print_regression_metrics(np.array(ypred)[:],np.array(ytrue)[:],True)
     df = pd.DataFrame({'filename':file,'ytrue':ytrue,'ypred':ypred})
     df.to_csv(dir+os.sep+fname,index=False)
     wandb.save(fname)

@@ -29,7 +29,8 @@ Clr = ['#004A98',
 
 def print_metrics(ypred,y,printresults=False):
     """
-    Calculate metrics based on predictions
+    Calculate metrics based on predictions. If there are no postive true
+    labels, then will return NaNs
     
     Parameters:
         ypred (np array):       array of predicted probabilities
@@ -40,17 +41,24 @@ def print_metrics(ypred,y,printresults=False):
         results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
                                 std, pos mean, pos_std, neg mean, neg_std, max output)
     """
+
     mse = (sum((ypred-y)**2))/len(ypred)
-    bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
-    aps = average_precision_score(y,ypred)
-    gini = 2*roc_auc_score(y,ypred)-1
-    ece,mce = reliability_diag(y,ypred,None,None,plot=False)
     std = np.std(ypred)
     pos_mean = np.mean(ypred[y==1])
     pos_std = np.std(ypred[y==1])
     neg_mean = np.mean(ypred[y==0])
     neg_std = np.std(ypred[y==0])
     max_output = np.max(ypred)
+
+    if sum(y) == 0: # no positive data, return null results
+        print('No positive events in dataset, returning NaNs for some results')
+        bss = aps = gini = ece = mce = np.NaN
+    else:
+        bss = (sum((ypred-y)**2)-sum((sum(y)/len(y)-y)**2))/(-sum((sum(y)/len(y)-y)**2))
+        aps = average_precision_score(y,ypred)
+        gini = 2*roc_auc_score(y,ypred)-1
+        ece,mce = reliability_diag(y,ypred,None,None,plot=False)
+    
     results = [mse,bss,aps,gini,ece,mce,std,pos_mean,pos_std,neg_mean,neg_std,max_output]
     if printresults:
         print('MSE, BSS, APS, Gini, ECE, MCE, std, pos mean, pos_std, neg mean, neg_std, max output')
@@ -151,7 +159,7 @@ def reliability_diag(ytrue,ypred,ax,label,nbins=10,plot=True,plot_hist=False,**k
 
     return ece,mce
 
-def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
+def calibrate_prob(run,nbinnings=20,pseudotest=True,rootdir='../'):
     """
     Loads model predictions and calibrates probabilites based on train/val dataset
 
@@ -159,16 +167,16 @@ def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
         run (str):          wandb run id
         nbinnings (int):    number of binnings for the probability calibration
         pseudotest (bool):  whether to load the pseudotest/holdout or the test set
-        root (str):         root dir to append when searching for wandb files
+        rootdir (str):      root dir to append when searching for wandb files
     Returns:
         df_test (dataframe): test data including filename, true, predicted and calibrated outputs
         df_trainval (dataframe):    trainval data
     """
     if pseudotest:
-        test_file = sorted(glob.glob(root+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
+        test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
     else:
-        test_file = sorted(glob.glob(root+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
-    trainval_file = sorted(glob.glob(root+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
+        test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
+    trainval_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
     df_test = pd.read_csv(test_file)
     df_trainval = pd.read_csv(trainval_file)
     calibrator = probability_calibration(df_trainval['ypred'],df_trainval['ytrue'],df_test['ypred'])
@@ -179,7 +187,7 @@ def calibrate_prob(run,nbinnings=20,pseudotest=True,root='../'):
     df_trainval['yprob'] = ypred_cal2
     return df_test,df_trainval
 
-def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
+def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True,rootdir='../'):
     """
     Assembles a dataframe with all the ensemble member predictions
     Performs probability calibration so both calibrated (yprob) and uncalibrated
@@ -190,6 +198,7 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
         experiment (str):   descriptor of the experiment to save to dataframe
         metricsfile (str):  filename to save metrics to
         pseudotest (bool):  flag to assemble pseudotest or test results
+        rootdir (str):      root dir to append when searching for wandb files
 
     Returns:
         df_ensemble (dataframe):    all ensemble predictions for pseudotest/test data
@@ -199,7 +208,7 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
     df_trainval_ensemble = pd.DataFrame()
 
     for run,i in zip(run_ids,range(len(run_ids))):
-        df,df_trainval = calibrate_prob(run,pseudotest=pseudotest)
+        df,df_trainval = calibrate_prob(run,rootdir=rootdir,pseudotest=pseudotest)
         df = df.rename(columns={'ypred':'ypred'+str(i),'yprob':'yprob'+str(i)})
         df_trainval = df_trainval.rename(columns={'ypred':'ypred'+str(i),'yprob':'yprob'+str(i)})
         if len(df_ensemble) == 0:
@@ -221,6 +230,57 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True):
 
     return df_ensemble,df_trainval_ensemble
 
+def create_ensemble_df_regression(run_ids,metricsfile,pseudotest:bool=True,rootdir:str='../'):
+    """
+    Assembles a dataframe with all the ensemble member regression predictions
+
+    Parameters:
+        run_ids (list):     wandb run ids for the ensemble
+        metricsfile (str):  filename to save metrics to
+        pseudotest (bool):  flag to assemble pseudotest or test results
+        rootdir (str):      root dir to append when searching for wandb files
+
+    Returns:
+        df_ensemble (dataframe):    all ensemble predictions for pseudotest/test data
+        df_trainval_ensemble (dataframe):   all ensemble predictions for train/val data
+    """
+    df_ensemble = pd.DataFrame()
+    df_trainval_ensemble = pd.DataFrame()
+    for j,run in enumerate(run_ids):
+        trainval_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
+        if pseudotest:
+            test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
+        else:
+            test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
+        df = pd.read_csv(test_file)
+        df_trainval = pd.read_csv(trainval_file)
+        df = df.rename(columns={'ypred':'ypred'+str(j)})
+        df_trainval = df_trainval.rename(columns={'ypred':'ypred'+str(j)})
+        if len(df_ensemble) == 0:
+            df_ensemble = df
+            df_trainval_ensemble = df_trainval
+        else:
+            df_ensemble = df_ensemble.merge(df,on=['filename','ytrue'])
+            df_trainval_ensemble = df_trainval_ensemble.merge(df_trainval,on=['filename','ytrue'])
+    
+    df_ensemble['ypred_mean'] = df_ensemble.filter(regex='ypred[0-9]').mean(axis=1)
+    df_ensemble['ypred_median'] = df_ensemble.filter(regex='ypred[0-9]').median(axis=1)
+    df_ensemble['ypred_std'] = df_ensemble.filter(regex='ypred[0-9]').std(axis=1)
+
+    metrics = []
+    index = []
+    for split in range(5):
+        metrics.append(print_regression_metrics(df_ensemble['ypred'+str(split)],df_ensemble['ytrue']))
+        index.append('Model '+str(split))
+    metrics.append(print_regression_metrics(df_ensemble['ypred_median'],df_ensemble['ytrue']))
+    index.append('Ensemble Median')
+    metrics.append(print_regression_metrics(df_ensemble['ypred_mean'],df_ensemble['ytrue']))
+    index.append('Ensemble Mean')
+
+    df_metrics = pd.DataFrame(data=np.array(metrics),index=index,columns=['MSE','MAE','R2'])
+    df_metrics.to_csv(metricsfile+'.csv')
+
+    return df_ensemble,df_trainval_ensemble,df_metrics
 
 def plot_reliability_diags(df,title):
     """
