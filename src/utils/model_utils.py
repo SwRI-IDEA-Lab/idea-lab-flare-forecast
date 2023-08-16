@@ -1,4 +1,5 @@
 from model import LitConvNet
+from model_regressor import LitConvNetRegressor
 import pandas as pd
 from pathlib import Path
 import numpy as np
@@ -6,21 +7,22 @@ import os
 from utils.analysis_helper import print_metrics, print_regression_metrics
 import wandb
 
-def load_model(run,ckpt_path,model,strict=True):
+def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True):
     """
     Load model into wandb run by downloading and initializing weights
 
     Parameters:forecasting
         run:        wandb run object
         ckpt_path:  wandb path to download model checkpoint from
-        model:      model class
+        model:      model instance
+        litclass:   Lightning model class (must have a load_from_checkpoint function)
     Returns:
-        classifier: LitConvNet object with loaded weights
+        classifier: litclass object with loaded weights
     """
     print('Loading model checkpoint from ', ckpt_path)
     artifact = run.use_artifact(ckpt_path,type='model')
     artifact_dir = artifact.download()
-    classifier = LitConvNet.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
+    classifier = litclass.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
     return classifier
 
 def save_preds(preds,dir,fname):

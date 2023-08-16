@@ -208,7 +208,8 @@ class MagnetogramDataModule(pl.LightningDataModule):
         else:
             self.df['flare'] = (self.df['xrsb_max_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
         # # define label based on linear relationship between flare intensity and flux
-        self.df['flare_flux'] = ((self.df['xrsb_max_in'+str(self.forecast_window)+'h']==0) & self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['flare_intensity_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
+        self.df['flare_flux'] = ((self.df['xrsb_max_in_'+str(self.forecast_window)+'h']==0) & 
+                                 self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['xrsb_max_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
         self.df['flare_flux'] = self.df['flare_flux'].astype(int)
 
     def setup(self,stage: str):
