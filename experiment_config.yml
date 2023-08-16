@@ -1,23 +1,25 @@
 data:
   augmentation: conservative
   balance_ratio: 0
-  data_file: Data/labels_all_smoothed.csv
+  data_file: Data/labels_regression_cleanedandchecked.csv
   dim: 128
-  feature_cols: ['tot_us_flux','tot_flux','datamin','datamax','flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h']
+  feature_cols: []
+  file_col: filename
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
   forecast_window: 24
   label: flare
-  split_type: temporal
+  maxval: 300
+  regression: true
+  test: ''
   val_split: 0
-  test: 'test_a'
 meta:
   id: None
-  project: flare-forecast
+  project: flare-forecast-regression
   resume: false
   user: kierav
 model:
-  checkpoint_location: None
+  checkpoint_location:  None
   dropout_ratio: 0
   load_checkpoint: false
 testing:
@@ -25,8 +27,8 @@ testing:
   savefile: '24h_testa'
   savedir: 'results'
 training:
-  device: gpu
   batch_size: 256
+  device: gpu
   epochs: 100
   lr: 0.0001
   wd: 0.001

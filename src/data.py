@@ -17,7 +17,7 @@ def split_data(df,val_split,test=''):
     """
         Split dataset into training, validation, hold-out (pseudotest) and test sets.
         The test set can be either 'test_a' which is all data from November and December,
-        or 'test_b' which is 2016-2017, or both combined. The hold-out set is data from
+        or 'test_b' which is 2021-2022, or both combined. The hold-out set is data from
         Sept 15-Oct 31. The remaining data is split temporally 4:1 into training and 
         validation.
 
@@ -35,7 +35,7 @@ def split_data(df,val_split,test=''):
 
     # hold out test sets
     inds_test_a = (df['sample_time'].dt.month >= 11)
-    inds_test_b = (df['sample_time']>=datetime(2016,1,1))&(df['sample_time']<datetime(2018,1,1)) 
+    inds_test_b = (df['sample_time']>=datetime(2021,1,1))&(df['sample_time']<datetime(2023,1,1)) 
     
     # select test set
     if test == 'test_a':
@@ -52,7 +52,7 @@ def split_data(df,val_split,test=''):
     if test == 'test_a':
         inds_pseudotest = ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
     elif test == 'test_b':
-        inds_pseudotest = (df['sample_time']>=datetime(2015,12,26))
+        inds_pseudotest = (df['sample_time']>=datetime(2020,12,26))
     else:
         inds_pseudotest = (df_full['sample_time'].dt.month==10) | ((df_full['sample_time'].dt.month==9)&(df_full['sample_time'].dt.day>15))
     # inds_pseudotest = (df['sample_time']<datetime(1996,1,1)) | ((df_full['sample_time'].dt.month==10)&(df_full['sample_time'].dt.day>26)) | ((df_full['sample_time'].dt.month==1)&(df_full['sample_time'].dt.day<6))
@@ -74,14 +74,20 @@ class MagnetogramDataSet(Dataset):
         Parameters:
             df (dataframe):     Pandas dataframe containing filenames and labels 
             label (str):        Name of column with label data
-            transform:          torchvision transform to apply to data (default is ToTensor())
+            transform:          torchvision transforms to apply to data (default is ToTensor())
+            feature_cols (list): names of scalar feature columns
+            file_col (str):     column name for data files
+            maxval (float):     scaling value for data
     """
-    def __init__(self,df,label: str ='flare',transform=transforms.ToTensor(),feature_cols=[]):
-        self.name_frame = df.loc[:,'filename']
+    def __init__(self,df,label:str='flare',transform=transforms.ToTensor(),
+                 feature_cols:list=[],file_col:str='filename',maxval:float=300):
+        self.name = file_col
+        self.name_frame = df.loc[:,file_col]
         self.label_frame = df.loc[:,label]
         self.dataset_frame = df.loc[:,'dataset']
         self.transform = transform
         self.features = df.loc[:,feature_cols]
+        self.maxval = maxval
 
     def __len__(self):
         return len(self.name_frame)
@@ -97,18 +103,23 @@ class MagnetogramDataSet(Dataset):
                 List:           Filename, magnetogram image array, and label
         """
         filename = self.name_frame.iloc[idx]
-        img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
-        img = np.nan_to_num(img)
+        if self.name != 'filename':
+            # embedding is in shape (dim x dim x channels)
+            img = np.load('../solar-similarity-search/'+filename).astype(np.float32)
+            img = img/self.maxval
+        else:
+            img = np.array(h5py.File(filename,'r')['magnetogram']).astype(np.float32)
+            img = np.nan_to_num(img)
+
+            # Normalize magnetogram data
+            # clip magnetogram data within max value
+            img[np.where(img>self.maxval)] = self.maxval
+            img[np.where(img<-self.maxval)] = -self.maxval
+            # scale between -1 and 1
+            img = img/self.maxval
+
         label = self.label_frame.iloc[idx]
         features = torch.Tensor(self.features.iloc[idx])
-
-        # Normalize magnetogram data
-        # clip magnetogram data within max value
-        maxval = 1000  # Gauss
-        img[np.where(img>maxval)] = maxval
-        img[np.where(img<-maxval)] = -maxval
-        # scale between -1 and 1
-        img = img/maxval
 
         # transform image
         img = self.transform(img)
@@ -125,7 +136,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
             data_file (str):        file containing magnetogram filenames and labels
             label (str):            name of column for label data (i.e., 'flare' or 'high_flux')
             balance_ratio (int):    ratio of negatives to positives to impose, None for unbalanced
-            split_type (str):       method of splitting training and validation data ('random' or 'temporal')
+            regression (bool):      regression task if True else classification
             forecast_window (int):  number of hours for forecast
             dim (int):              dimension for scaling data
             batch (int):            batch size for all dataloaders
@@ -134,23 +145,27 @@ class MagnetogramDataModule(pl.LightningDataModule):
             flux_thresh (float):    threshold for total unsigned flux to label as positive (default 4e7)
             feature_cols (list):    list of columns names for scalar features
             test (str):             which test set to choose (test_a or test_b else both)
+            file_col (str):         dataframe column name for data files
+            maxval (float):         min-max scaling parameter
     """
-    def __init__(self, data_file:str, label:str, balance_ratio:int=None, split_type:str='random', 
+    def __init__(self, data_file:str, label:str, balance_ratio:int=None, regression:bool=False, 
                  val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
                  augmentation: str = None, flare_thresh: float = 1e-5, flux_thresh: float = 1.5e7,
-                 feature_cols=['tot_us_flux'], test: str = ''):
+                 feature_cols=['tot_us_flux'], test: str = '', file_col:str='filename', maxval:float=300):
         super().__init__()
         self.data_file = data_file
         self.label = label
         self.flux_thresh = flux_thresh
         self.flare_thresh = flare_thresh
         self.forecast_window = forecast_window
-        self.split_type = split_type
+        self.regression = regression
         self.val_split = val_split
         self.balance_ratio = balance_ratio
         self.batch_size = batch
         self.feature_cols = feature_cols
         self.test = test
+        self.file_col = file_col
+        self.maxval = maxval
 
         # define data transforms
         self.transform = transforms.Compose([
@@ -183,10 +198,18 @@ class MagnetogramDataModule(pl.LightningDataModule):
         self.df['sample_time'] = pd.to_datetime(self.df['sample_time'])
         # define high flux based on total unsigned flux threshold (for pretraining)
         self.df['high_flux'] = (self.df['tot_us_flux'] >= self.flux_thresh).astype(int)
-        # define flare label based on desired forecast window
-        self.df['flare'] = (self.df['flare_intensity_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
-        # define label based on linear relationship between flare intensity and flux
-        self.df['flare_flux'] = ((self.df['flare_intensity_in_'+str(self.forecast_window)+'h']==0) & self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['flare_intensity_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
+        # define flare label based on desired forecast window and regression or classification task
+        if self.regression:
+            self.df['flare'] = self.df['xrsb_max_in_'+str(self.forecast_window)+'h']
+            self.df['flare'] = (np.log10(self.df['flare'])+8.5)/6
+            self.p_thresh = (np.log10(self.flare_thresh)+8.5)/6
+            self.df.loc[self.df['flare']<0,'flare'] = 0
+            self.df = self.df.dropna(axis=0,subset='flare')
+        else:
+            self.df['flare'] = (self.df['xrsb_max_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
+        # # define label based on linear relationship between flare intensity and flux
+        self.df['flare_flux'] = ((self.df['xrsb_max_in_'+str(self.forecast_window)+'h']==0) & 
+                                 self.df['tot_us_flux']>=self.flux_thresh) + (np.log10(self.df['xrsb_max_in_'+str(self.forecast_window)+'h'])>(-3 - 3/self.flux_thresh*self.df['tot_us_flux']))
         self.df['flare_flux'] = self.df['flare_flux'].astype(int)
 
     def setup(self,stage: str):
@@ -203,12 +226,13 @@ class MagnetogramDataModule(pl.LightningDataModule):
             df_train = df_train.iloc[inds_train,:]
 
         # scale input features
-        self.scaler = StandardScaler()
-        self.scaler.fit(df_train.loc[:,self.feature_cols])
-        df_train.loc[:,self.feature_cols] = self.scaler.transform(df_train.loc[:,self.feature_cols])
-        df_val.loc[:,self.feature_cols] = self.scaler.transform(df_val.loc[:,self.feature_cols])
-        df_pseudotest.loc[:,self.feature_cols] = self.scaler.transform(df_pseudotest.loc[:,self.feature_cols])
-        df_test.loc[:,self.feature_cols] = self.scaler.transform(df_test.loc[:,self.feature_cols])
+        if len(self.feature_cols)>0:
+            self.scaler = StandardScaler()
+            self.scaler.fit(df_train.loc[:,self.feature_cols])
+            df_train.loc[:,self.feature_cols] = self.scaler.transform(df_train.loc[:,self.feature_cols])
+            df_val.loc[:,self.feature_cols] = self.scaler.transform(df_val.loc[:,self.feature_cols])
+            df_pseudotest.loc[:,self.feature_cols] = self.scaler.transform(df_pseudotest.loc[:,self.feature_cols])
+            df_test.loc[:,self.feature_cols] = self.scaler.transform(df_test.loc[:,self.feature_cols])
 
         self.train_set = MagnetogramDataSet(df_train,self.label,self.training_transform,self.feature_cols)
         self.val_set = MagnetogramDataSet(df_val,self.label,self.transform,self.feature_cols)
@@ -219,21 +243,21 @@ class MagnetogramDataModule(pl.LightningDataModule):
               'Valid:',len(self.val_set),
               'Pseudo-test:',len(self.pseudotest_set),
               'Test:',len(self.test_set))
-        self.train_p = sum(df_train[self.label]==1)
-        self.train_n = sum(df_train[self.label]==0)
-        print('P/N ratio in training:',sum(df_train[self.label]==1),sum(df_train[self.label]==0))
-        print('P/N ratio in validation:',sum(df_val[self.label]==1),sum(df_val[self.label]==0))
-        print('P/N ratio in pseudotest:',sum(df_pseudotest[self.label]==1),sum(df_pseudotest[self.label]==0))
-        print('P/N ratio in test:',sum(df_test[self.label]==1),sum(df_test[self.label]==0))
+        self.train_p = sum(df_train[self.label]>self.p_thresh)
+        self.train_n = sum(df_train[self.label]<=self.p_thresh)
+        print('P/N ratio in training:',sum(df_train[self.label]>self.p_thresh),sum(df_train[self.label]<=self.p_thresh))
+        print('P/N ratio in validation:',sum(df_val[self.label]>self.p_thresh),sum(df_val[self.label]<=self.p_thresh))
+        print('P/N ratio in pseudotest:',sum(df_pseudotest[self.label]>self.p_thresh),sum(df_pseudotest[self.label]<=self.p_thresh))
+        print('P/N ratio in test:',sum(df_test[self.label]>self.p_thresh),sum(df_test[self.label]<=self.p_thresh))
 
     def train_dataloader(self):
-        return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4,shuffle=True)
+        return DataLoader(self.train_set,batch_size=self.batch_size,num_workers=4,drop_last=True,shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_set,batch_size=self.batch_size,num_workers=4)
+        return DataLoader(self.val_set,batch_size=self.batch_size,num_workers=4,drop_last=True)
 
-    def trainval_dataloader(self):
-        return DataLoader(self.trainval_set,batch_size=self.batch_size,num_workers=4)
+    def trainval_dataloader(self,shuffle=False):
+        return DataLoader(self.trainval_set,batch_size=self.batch_size,num_workers=4,shuffle=shuffle,drop_last=True)
 
     def pseudotest_dataloader(self):
         return DataLoader(self.pseudotest_set,batch_size=self.batch_size,num_workers=4)

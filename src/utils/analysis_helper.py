@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.calibration import calibration_curve
-from sklearn.metrics import average_precision_score,roc_auc_score,roc_curve,confusion_matrix,precision_recall_curve
-from probability_calibration import probability_calibration
+from sklearn.metrics import average_precision_score,roc_auc_score,roc_curve,confusion_matrix,precision_recall_curve,r2_score
+from src.probability_calibration import probability_calibration
 import seaborn as sns
 from sunpy import timeseries as ts
 from sunpy.net import Fido
@@ -62,6 +62,29 @@ def print_metrics(ypred,y,printresults=False):
     results = [mse,bss,aps,gini,ece,mce,std,pos_mean,pos_std,neg_mean,neg_std,max_output]
     if printresults:
         print('MSE, BSS, APS, Gini, ECE, MCE, std, pos mean, pos_std, neg mean, neg_std, max output')
+        print(results)
+    return results
+
+def print_regression_metrics(ypred,y,printresults=False):
+    """
+    Calculate metrics based on regression predictions
+    
+    Parameters:
+        ypred (np array):       array of predicted outputs
+        y (np array):           corresponding true outputs 
+        printresults (bool):    flag to print out results or 
+    
+    Returns:
+        results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
+                                std, pos mean, pos_std, neg mean, neg_std, max output)
+    """
+    mse = (sum((ypred*6-y*6)**2))/len(ypred)
+    mae = sum(abs(ypred*6-y*6))/len(ypred)
+    r2 = r2_score(y*6,ypred*6)
+
+    results = [mse,mae,r2]
+    if printresults:
+        print('MSE, MAE, R2')
         print(results)
     return results
 
@@ -207,6 +230,57 @@ def create_ensemble_df(run_ids,experiment,metricsfile,pseudotest=True,rootdir='.
 
     return df_ensemble,df_trainval_ensemble
 
+def create_ensemble_df_regression(run_ids,metricsfile,pseudotest:bool=True,rootdir:str='../'):
+    """
+    Assembles a dataframe with all the ensemble member regression predictions
+
+    Parameters:
+        run_ids (list):     wandb run ids for the ensemble
+        metricsfile (str):  filename to save metrics to
+        pseudotest (bool):  flag to assemble pseudotest or test results
+        rootdir (str):      root dir to append when searching for wandb files
+
+    Returns:
+        df_ensemble (dataframe):    all ensemble predictions for pseudotest/test data
+        df_trainval_ensemble (dataframe):   all ensemble predictions for train/val data
+    """
+    df_ensemble = pd.DataFrame()
+    df_trainval_ensemble = pd.DataFrame()
+    for j,run in enumerate(run_ids):
+        trainval_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/trainval_results.csv'))[-1]   #obtain last dir with matching id
+        if pseudotest:
+            test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/pseudotest_results.csv'))[-1]   #obtain last dir with matching id
+        else:
+            test_file = sorted(glob.glob(rootdir+'wandb/*'+run+'/files/test_results.csv'))[-1]   #obtain last dir with matching id
+        df = pd.read_csv(test_file)
+        df_trainval = pd.read_csv(trainval_file)
+        df = df.rename(columns={'ypred':'ypred'+str(j)})
+        df_trainval = df_trainval.rename(columns={'ypred':'ypred'+str(j)})
+        if len(df_ensemble) == 0:
+            df_ensemble = df
+            df_trainval_ensemble = df_trainval
+        else:
+            df_ensemble = df_ensemble.merge(df,on=['filename','ytrue'])
+            df_trainval_ensemble = df_trainval_ensemble.merge(df_trainval,on=['filename','ytrue'])
+    
+    df_ensemble['ypred_mean'] = df_ensemble.filter(regex='ypred[0-9]').mean(axis=1)
+    df_ensemble['ypred_median'] = df_ensemble.filter(regex='ypred[0-9]').median(axis=1)
+    df_ensemble['ypred_std'] = df_ensemble.filter(regex='ypred[0-9]').std(axis=1)
+
+    metrics = []
+    index = []
+    for split in range(5):
+        metrics.append(print_regression_metrics(df_ensemble['ypred'+str(split)],df_ensemble['ytrue']))
+        index.append('Model '+str(split))
+    metrics.append(print_regression_metrics(df_ensemble['ypred_median'],df_ensemble['ytrue']))
+    index.append('Ensemble Median')
+    metrics.append(print_regression_metrics(df_ensemble['ypred_mean'],df_ensemble['ytrue']))
+    index.append('Ensemble Mean')
+
+    df_metrics = pd.DataFrame(data=np.array(metrics),index=index,columns=['MSE','MAE','R2'])
+    df_metrics.to_csv(metricsfile+'.csv')
+
+    return df_ensemble,df_trainval_ensemble,df_metrics
 
 def plot_reliability_diags(df,title):
     """

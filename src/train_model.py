@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
+from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
 from linear_model import LinearModel
 from utils.model_utils import *
@@ -26,6 +27,13 @@ def main():
         run = wandb.init(config=config,project=config['meta']['project'])
     config = wandb.config
 
+    if config.data['regression']:
+        litclass = LitConvNetRegressor
+        modelclass = convnet_sc_regressor
+    else:
+        litclass = LitConvNet
+        modelclass = convnet_sc
+
     # set seeds
     pl.seed_everything(42,workers=True)
 
@@ -36,7 +44,7 @@ def main():
     data = MagnetogramDataModule(data_file=config.data['data_file'],
                                  label=config.data['label'],
                                  balance_ratio=config.data['balance_ratio'],
-                                 split_type=config.data['split_type'],
+                                 regression=config.data['regression'],
                                  val_split=config.data['val_split'],
                                  forecast_window=config.data['forecast_window'],
                                  dim=config.data['dim'],
@@ -45,31 +53,39 @@ def main():
                                  flare_thresh=config.data['flare_thresh'],
                                  flux_thresh=config.data['flux_thresh'],
                                  feature_cols=config.data['feature_cols'],
-                                 test=config.data['test'])
+                                 test=config.data['test'],
+                                 maxval=config.data['maxval'],
+                                 file_col=config.data['file_col'])
 
     # train LR model to obtain weights for final layer of CNN+LR
-    lr_model = LinearModel(data_file=config.data['data_file'],
-                           window=config.data['forecast_window'],
-                           val_split=config.data['val_split'],
-                           flare_thresh=config.data['flare_thresh'],
-                           features=config.data['feature_cols'])
-    lr_model.prepare_data()
-    lr_model.setup()
-    lr_model.train()
-    
-    weights = lr_model.model.intercept_
-    weights = np.append(weights,lr_model.model.coef_[0])
+    if len(config.data['feature_cols'])>0:
+        lr_model = LinearModel(data_file=config.data['data_file'],
+                            window=config.data['forecast_window'],
+                            val_split=config.data['val_split'],
+                            flare_thresh=config.data['flare_thresh'],
+                            features=config.data['feature_cols'])
+        lr_model.prepare_data()
+        lr_model.setup()
+        lr_model.train()
+        
+        weights = lr_model.model.intercept_
+        weights = np.append(weights,lr_model.model.coef_[0])
+    else:
+        weights = []
 
     # initialize model
-    model = convnet_sc(dim=config.data['dim'],length=1,len_features=len(config.data['feature_cols']),weights=weights,dropoutRatio=config.model['dropout_ratio'])
-    classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
+    model = modelclass(dim=config.data['dim'],length=1,
+                                 len_features=len(config.data['feature_cols']),
+                                 weights=weights,dropoutRatio=config.model['dropout_ratio'])
+    classifier = litclass(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
 
     # load checkpoint
     if wandb.run.resumed:
-        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/model-'+config.meta['id']+':latest',model)
+        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+config.meta['id']+':latest',
+                                model, litclass=litclass)
     elif config.model['load_checkpoint']:
-        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/'+config.model['checkpoint_location'], 
-                                model, strict=False)
+        classifier = load_model(run, config.model['checkpoint_location'], model, 
+                                litclass=litclass, strict=False)
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')
@@ -79,7 +95,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0,patience=20,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0005,patience=10,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
@@ -87,13 +103,15 @@ def main():
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                         logger=wandb_logger)
+                         logger=wandb_logger,
+                         precision=16)
     trainer.fit(model=classifier,datamodule=data)
 
     # test trained model
     if config.testing['eval']:
         # load best checkpoint
-        classifier = load_model(run, config.meta['user']+'/'+config.meta['project']+'/model-'+run.id+':best_k', model)
+        classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model,
+                                litclass=litclass)
 
         # save predictions locally
         print('------Train/val predictions------')
