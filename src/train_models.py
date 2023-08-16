@@ -33,7 +33,7 @@ for i in range(val_splits):
     run_id = pseudotest_classifier_models[i]
     config['data']['label'] = 'flare'
     config['data']['augmentation'] = 'conservative'
-    config['model']['checkpoint_location'] = 'model-'+run_id+':best_k'
+    config['model']['checkpoint_location'] = 'kierav/flare-forecast/model-'+run_id+':best_k'
     config['model']['load_checkpoint'] = True
     config['testing']['eval'] = True
     with open('experiment_config.yml','w') as config_file:
