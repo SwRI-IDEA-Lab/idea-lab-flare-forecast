@@ -1,5 +1,9 @@
 # idea-lab-flare-forecast
 
+
+[![DOI](https://zenodo.org/badge/604852892.svg)](https://zenodo.org/badge/latestdoi/604852892)
+
+
 Probabilistic flare forecasting on single time-frame historical magnetograms.
 
 To set up the environment using conda, run the following:  
