@@ -55,7 +55,10 @@ class convnet_sc_regressor(nn.Module):
         )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(100+len_features,1),
+            nn.Linear(100+len_features,100),
+	    nn.ReLU(inplace=True),
+	    nn.Dropout1d(dropoutRatio),
+	    nn.Linear(100,1),
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -65,7 +68,7 @@ class convnet_sc_regressor(nn.Module):
         # coeff intercept for LR model on all features [[ 1.35617824  0.5010206  -0.56691345  1.85041399  0.7660414   0.55303976 2.42641335  1.67886773  1.88992678  2.84953033]] [-3.85753394]
         if len(weights)!=0:
             with torch.no_grad():
-                self.fcl2[0].weight[0,1:] = torch.Tensor(weights[1:])
+                self.fcl2[0].weight[0,-len(weights)+1:] = torch.Tensor(weights[1:])
                 self.fcl2[0].bias[0] = weights[0]
 
     def _init_weights(self,module):

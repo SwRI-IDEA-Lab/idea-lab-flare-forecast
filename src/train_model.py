@@ -73,6 +73,7 @@ def main():
     else:
         weights = []
 
+    weights=[]
     # initialize model
     model = modelclass(dim=config.data['dim'],length=1,
                                  len_features=len(config.data['feature_cols']),
@@ -95,11 +96,11 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0005,patience=10,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=10,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
-                         devices=1,
+                         devices=[3],
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],

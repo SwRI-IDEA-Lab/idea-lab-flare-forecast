@@ -3,7 +3,17 @@ data:
   balance_ratio: 0
   data_file: Data/labels_regression_cleanedandchecked.csv
   dim: 128
-  feature_cols: ['tot_us_flux','tot_flux','datamin','datamax','flare_rate_y','flare_rate_m','flare_rate_w','max_flare_72h','max_flare_48h','max_flare_24h']
+  feature_cols:
+  - tot_us_flux
+  - tot_flux
+  - datamin
+  - datamax
+  - flare_rate_y
+  - flare_rate_m
+  - flare_rate_w
+  - max_flare_72h
+  - max_flare_48h
+  - max_flare_24h
   file_col: filename
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
@@ -12,23 +22,23 @@ data:
   maxval: 300
   regression: true
   test: ''
-  val_split: 0
+  val_split: 2
 meta:
   id: None
   project: flare-forecast-regression
   resume: false
   user: kierav
 model:
-  checkpoint_location:  None
+  checkpoint_location: kierav/flare-forecast/model-7yiwewej:best_k
   dropout_ratio: 0
-  load_checkpoint: false
+  load_checkpoint: true
 testing:
   eval: true
-  savefile: '24h_allfeats_pretrained_regression'
-  savedir: 'results'
+  savedir: results
+  savefile: 24h_allfeats_pretrained_regression
 training:
   batch_size: 256
   device: gpu
   epochs: 100
-  lr: 0.0001
+  lr: 0.01
   wd: 0.001
