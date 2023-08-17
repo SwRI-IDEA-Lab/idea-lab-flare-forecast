@@ -116,15 +116,15 @@ def main():
         # save predictions locally
         print('------Train/val predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.trainval_dataloader())
-        save_preds(preds,wandb.run.dir,'trainval_results.csv')
+        save_preds(preds,wandb.run.dir,'trainval_results.csv',config.data['regression'])
 
         print('------Pseudotest predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
-        save_preds(preds,wandb.run.dir,'pseudotest_results.csv')
+        save_preds(preds,wandb.run.dir,'pseudotest_results.csv',config.data['regression'])
 
         print('------Test predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
-        save_preds(preds,wandb.run.dir,'test_results.csv')
+        save_preds(preds,wandb.run.dir,'test_results.csv',config.data['regression'])
 
     wandb.finish()
 

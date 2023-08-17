@@ -49,7 +49,11 @@ for i in range(val_splits):
 if not os.path.exists(config['testing']['savedir']):
     os.makedirs(config['testing']['savedir'])
 
-if not config['data']['regression'] and config['testing']['eval']:
+if config['data']['regression'] and config['testing']['eval']:
+    df,df_trainval = create_ensemble_df_regression(run_ids,
+                        config['testing']['savedir']+'/metrics_'+config['testing']['savefile'],
+                        rootdir='',pseudotest=True)
+elif not config['data']['regression'] and config['testing']['eval']:
     df,df_trainval = create_ensemble_df(run_ids,'',
                         config['testing']['savedir']+'/metrics_'+config['testing']['savefile'],
                         rootdir='',pseudotest=False)
