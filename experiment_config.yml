@@ -29,13 +29,13 @@ meta:
   resume: false
   user: kierav
 model:
-  checkpoint_location: kierav/flare-forecast/model-7yiwewej:best_k
+  checkpoint_location: None
   dropout_ratio: 0
-  load_checkpoint: true
+  load_checkpoint: false
 testing:
   eval: true
   savedir: results
-  savefile: 24h_allfeats_pretrained_regression
+  savefile: 24h_archDMLPweights_pretrained_regression
 training:
   batch_size: 256
   device: gpu

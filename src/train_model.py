@@ -1,6 +1,7 @@
 import sys,os
 sys.path.append(os.getcwd())
 
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -8,6 +9,7 @@ from model import convnet_sc,LitConvNet
 from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
 from linear_model import LinearModel
+from mlp_model import MLPModel
 from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
@@ -59,19 +61,32 @@ def main():
 
     # train LR model to obtain weights for final layer of CNN+LR
     if len(config.data['feature_cols'])>0:
-        lr_model = LinearModel(data_file=config.data['data_file'],
+        # lr_model = LinearModel(data_file=config.data['data_file'],
+        #                     window=config.data['forecast_window'],
+        #                     val_split=config.data['val_split'],
+        #                     flare_thresh=config.data['flare_thresh'],
+        #                     features=config.data['feature_cols'])
+        # lr_model.prepare_data()
+        # lr_model.setup()
+        # lr_model.train()
+        
+        # weights = lr_model.model.intercept_
+        # weights = np.append(weights,lr_model.model.coef_[0])
+        mlp_model = MLPModel(data_file=config.data['data_file'],
                             window=config.data['forecast_window'],
                             val_split=config.data['val_split'],
                             flare_thresh=config.data['flare_thresh'],
-                            features=config.data['feature_cols'])
-        lr_model.prepare_data()
-        lr_model.setup()
-        lr_model.train()
-        
-        weights = lr_model.model.intercept_
-        weights = np.append(weights,lr_model.model.coef_[0])
+                            features=config.data['feature_cols'],
+                            hidden_layer_sizes=(100,))
+        mlp_model.prepare_data()
+        mlp_model.setup()
+        mlp_model.train()
+        weights = [mlp_model.model.coefs_[0],mlp_model.model.intercepts_[0],
+                   mlp_model.model.coefs_[1],mlp_model.model.intercepts_[1]]
     else:
         weights = []
+    
+    print(weights)
 
     weights=[]
     # initialize model
@@ -87,6 +102,7 @@ def main():
     elif config.model['load_checkpoint']:
         classifier = load_model(run, config.model['checkpoint_location'], model, 
                                 litclass=litclass, strict=False)
+
 
     # initialize wandb logger
     wandb_logger = WandbLogger(log_model='all')

@@ -1,7 +1,7 @@
 """ Helper functions for plotting and analysis of model predictions """
 
 import sys,os
-sys.path.append('..')
+sys.path.append(os.getcwd())
 
 from datetime import datetime,timedelta 
 import glob
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import average_precision_score,roc_auc_score,roc_curve,confusion_matrix,precision_recall_curve,r2_score
-from probability_calibration import probability_calibration
+from src.probability_calibration import probability_calibration
 import seaborn as sns
 from sunpy import timeseries as ts
 from sunpy.net import Fido
