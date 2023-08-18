@@ -13,7 +13,7 @@ run_ids = []
 windows = [1,6,12,24]
 val_splits = 5
 
-for i in range(val_splits):
+for i in range(1,val_splits):
     config['data']['val_split'] = i
     config['data']['forecast_window'] =24
     # first pretrain

@@ -55,10 +55,10 @@ class convnet_sc_regressor(nn.Module):
         )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(100+len_features,100),
-            nn.ReLU(inplace=True),
-            nn.Dropout1d(dropoutRatio),
-            nn.Linear(100,1),
+            nn.Linear(100+len_features,100)
+	    nn.ReLU(inplace=True),
+	    nn.Dropout1d(dropoutRatio),
+	    nn.Linear(100,1),
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
