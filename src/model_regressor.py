@@ -16,6 +16,8 @@ class convnet_sc_regressor(nn.Module):
     """
     def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
+        self.len_features = len_features
+
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
@@ -46,19 +48,26 @@ class convnet_sc_regressor(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.fcl = nn.Sequential(
-            nn.LazyLinear(100),
-            nn.ReLU(inplace=True),
-            nn.Dropout1d(dropoutRatio),
-            # nn.Linear(100,1),
-            # nn.ReLU(inplace=True),
-        )
+        if len_features == 0:
+            self.fcl = nn.Sequential(
+                nn.LazyLinear(100),
+                nn.ReLU(inplace=True),
+                nn.Dropout1d(dropoutRatio),
+                nn.Linear(100,1),
+                nn.ReLU(inplace=True),
+            )
+        else:
+            self.fcl = nn.Sequential(
+                nn.LazyLinear(100),
+                nn.ReLU(inplace=True),
+                nn.Dropout1d(dropoutRatio),
+            )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(100+len_features,100)
-	    nn.ReLU(inplace=True),
-	    nn.Dropout1d(dropoutRatio),
-	    nn.Linear(100,1),
+            nn.Linear(100+len_features,100),
+            nn.ReLU(inplace=True),
+            nn.Dropout1d(dropoutRatio),
+            nn.Linear(100,1),   
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -106,8 +115,9 @@ class convnet_sc_regressor(nn.Module):
         x = self.fcl(x)
 
         # # append features
-        x = torch.cat([x,f],dim=1)
-        x = self.fcl2(x)
+        if self.len_features > 0:
+            x = torch.cat([x,f],dim=1)
+            x = self.fcl2(x)
         return x
     
 class convnet_mini_regressor(nn.Module):
