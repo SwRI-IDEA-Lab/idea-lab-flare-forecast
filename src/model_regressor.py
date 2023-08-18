@@ -16,6 +16,8 @@ class convnet_sc_regressor(nn.Module):
     """
     def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
+        self.len_features = len_features
+
         self.block1 = nn.Sequential(
             nn.Conv2d(1, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
@@ -46,16 +48,26 @@ class convnet_sc_regressor(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.fcl = nn.Sequential(
-            nn.LazyLinear(100),
-            nn.ReLU(inplace=True),
-            nn.Dropout1d(dropoutRatio),
-            nn.Linear(100,1),
-            # nn.ReLU(inplace=True),
-        )
+        if len_features == 0:
+            self.fcl = nn.Sequential(
+                nn.LazyLinear(100),
+                nn.ReLU(inplace=True),
+                nn.Dropout1d(dropoutRatio),
+                nn.Linear(100,1),
+                nn.ReLU(inplace=True),
+            )
+        else:
+            self.fcl = nn.Sequential(
+                nn.LazyLinear(100),
+                nn.ReLU(inplace=True),
+                nn.Dropout1d(dropoutRatio),
+            )
         
         self.fcl2 = nn.Sequential(
-            nn.Linear(1+len_features,1),
+            nn.Linear(100+len_features,100),
+            nn.ReLU(inplace=True),
+            nn.Dropout1d(dropoutRatio),
+            nn.Linear(100,1),   
         )
         
         self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
@@ -65,9 +77,13 @@ class convnet_sc_regressor(nn.Module):
         # coeff intercept for LR model on all features [[ 1.35617824  0.5010206  -0.56691345  1.85041399  0.7660414   0.55303976 2.42641335  1.67886773  1.88992678  2.84953033]] [-3.85753394]
         if len(weights)!=0:
             with torch.no_grad():
-                self.fcl2[0].weight[0,1:] = torch.Tensor(weights[1:])
-                self.fcl2[0].bias[0] = weights[0]
-
+                # self.fcl2[0].weight[0,-len(weights)+1:] = torch.Tensor(weights[1:])
+                # self.fcl2[0].bias[0] = weights[0]
+                self.fcl2[0].weight[:,-len_features:] = torch.Tensor(weights[0]).transpose(0,1)
+                self.fcl2[0].bias[:] = torch.Tensor(weights[1])
+                self.fcl2[3].weight[0,:] = torch.Tensor(weights[2]).view(len(weights[2]))
+                self.fcl2[3].bias[0] = torch.Tensor(weights[3])
+                
     def _init_weights(self,module):
         """
             Function to check for layer instances within the model and initialize
@@ -99,8 +115,9 @@ class convnet_sc_regressor(nn.Module):
         x = self.fcl(x)
 
         # # append features
-        # x = torch.cat([x,f],dim=1)
-        # x = self.fcl2(x)
+        if self.len_features > 0:
+            x = torch.cat([x,f],dim=1)
+            x = self.fcl2(x)
         return x
     
 class convnet_mini_regressor(nn.Module):

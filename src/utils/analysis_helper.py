@@ -1,7 +1,7 @@
 """ Helper functions for plotting and analysis of model predictions """
 
 import sys,os
-sys.path.append('..')
+sys.path.append(os.getcwd())
 
 from datetime import datetime,timedelta 
 import glob
@@ -414,7 +414,7 @@ def plot_timeseries(df,tstart,tend,goes=False,cal='yprob'):
         ax2.set_ylim((1e-9,1e-3))
         ax2.grid(True)
         ax2.set_ylabel('W/m^2')
-    ax.plot(df['sample_time'],df['ytrue'],'--k')
+    ax.plot(np.repeat(np.array(df['sample_time']),2)[1:],np.repeat(np.array(df['ytrue']),2)[:-1],'--k')
     ax.plot(df['sample_time'],df[cal+'_median'],'.r')
     ax.fill_between(df['sample_time'],df.filter(regex=cal+'[0-9]').min(axis=1),df.filter(regex=cal+'[0-9]').max(axis=1),alpha=.7,interpolate=True)
 
