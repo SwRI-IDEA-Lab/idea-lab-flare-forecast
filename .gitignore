@@ -141,6 +141,7 @@ lightning_logs/*
 wandb/*
 *.ckpt
 *.ods
+Data/*.zarr
 
 # snakemake
 .snakemake/*

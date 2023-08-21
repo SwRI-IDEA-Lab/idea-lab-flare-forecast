@@ -15,3 +15,5 @@ dependencies:
   - snakemake
   - wandb
   - seaborn
+  - zarr
+  - xarray
