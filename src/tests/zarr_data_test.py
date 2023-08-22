@@ -2,6 +2,7 @@ import sys,os
 sys.path.append(os.getcwd())
 
 import unittest
+from datetime import datetime
 from src.data_zarr import ZarrDataSet,AIAHMIDataModule
 import pandas as pd
 import numpy as np
@@ -16,7 +17,7 @@ class ZarrDataTest(unittest.TestCase):
 
     def setUp(self):
         self.datafile = 'Data/labels_regression_aiahmi.csv'
-        self.zarrfile = '/d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_full.zarr/'
+        self.zarrfile = '/d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_full.zarr'
         self.df = pd.read_csv(self.datafile)
         self.label = 'flare'
         self.df['flare'] = (self.df['xrsb_max_in_24h']>=1e-5).astype(int)
@@ -27,14 +28,14 @@ class ZarrDataTest(unittest.TestCase):
             transforms.ToTensor(),
             transforms.Resize(self.dim,transforms.InterpolationMode.BILINEAR,antialias=True),
         ])
-        self.hmidataset = ZarrDataSet(self.df,self.zarrfile,
+        self.hmidataset = ZarrDataSet(self.df,self.zarrfile,self.df.index,
                                       label=self.label,transform=self.transform,
-                                      channels=7,maxvals=300)
-        self.aiahmidataset = ZarrDataSet(self.df,self.zarrfile,label=self.label,
-                                         transform=self.transform,channels=self.channels,maxvals=[500,1000,300])
+                                      channels=7,maxvals=(300,))
+        self.aiahmidataset = ZarrDataSet(self.df,self.zarrfile,self.df.index,label=self.label,
+                                         transform=self.transform,channels=self.channels,maxvals=(500,1000,300))
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.datamodule = AIAHMIDataModule(self.zarrfile,self.datafile,regression=True,
-                                           val_split=0,dim=self.dim,channels=self.channels,maxvals=[500,1000,300])
+                                           val_split=0,dim=self.dim,channels=self.channels,maxvals=(500,1000,300))
 
     def test_datasetExists(self):
         self.assertGreaterEqual(len(self.hmidataset),0)
@@ -43,20 +44,20 @@ class ZarrDataTest(unittest.TestCase):
         self.assertIsNotNone(self.hmidataset[0])
 
     def test_itemType(self):
-        item = self.dataset[self.idx]
+        item = self.hmidataset[self.idx]
         self.assertIsInstance(item,list)        
         self.assertEqual(len(item),4)
 
     def test_itemContents(self):
         item = self.hmidataset[self.idx]
-        self.assertIsInstance(item[0],str)
+        self.assertIsInstance(item[0],int)
         self.assertIsInstance(item[1],torch.Tensor)
         self.assertTrue(item[1].dtype==torch.float32)
         self.assertTrue(item[1].shape==(1,self.dim,self.dim))
         self.assertIsInstance(item[2],torch.Tensor)
         self.assertTrue(item[3] in self.labels)
         item2 = self.aiahmidataset[self.idx]
-        self.assertTrue(item[2].shape==(len(self.channels),self.dim,self.dim))
+        self.assertEqual(item2[1].shape,(len(self.channels),self.dim,self.dim))
 
 
     # def test_dataNormalization(self):

@@ -33,7 +33,7 @@ class ZarrDataSet(Dataset):
     """
     def __init__(self,df,zarr_file:str,indices:list,label:str='flare',
                  zarr_group:str='aia_hmi',transform=transforms.ToTensor(),
-                 feature_cols:list=None,channels=7,maxvals=300):
+                 feature_cols:list=None,channels=7,maxvals=(300,)):
         self.data = xr.open_zarr(zarr_file)
         self.zarr_group = zarr_group
         self.indices = indices
@@ -43,9 +43,9 @@ class ZarrDataSet(Dataset):
         if feature_cols == None:
             feature_cols = []
         self.features = df.loc[:,feature_cols]
-        self.channels = channels
+        self.channels = self.data.channel[channels].data
         self.maxvals = maxvals
-
+        
     def __len__(self):
         return len(self.indices)
 
@@ -59,22 +59,24 @@ class ZarrDataSet(Dataset):
             Returns:
                 List:           index, image array, and label
         """
-        zarr_idx = self.indices[idx]
+        zarr_idx = self.data.t_obs[self.indices[idx]].data
         img = self.data[self.zarr_group].loc[zarr_idx,self.channels,:,:].load()
         if img.ndim == 2:
             img = np.expand_dims(img,axis=0)
 
+        img = np.nan_to_num(img)
         # max scaling, TODO: change this to a torch transform
-        for i in range(len(self.channels)):
+        for i in range(np.shape(img)[0]):
             img[i,:,:] = img[i,:,:]/self.maxvals[i]
 
         label = self.label_frame.iloc[idx]
         features = torch.Tensor(self.features.iloc[idx])
 
         # transform image
+        img = np.transpose(img,(1,2,0))
         img = self.transform(img)
 
-        return [zarr_idx,img,features,label]
+        return [self.indices[idx],img,features,label]
 
 class AIAHMIDataModule(pl.LightningDataModule):
     """
@@ -99,7 +101,7 @@ class AIAHMIDataModule(pl.LightningDataModule):
     def __init__(self, zarr_file:str, data_file:str, regression:bool=False, 
                  val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
                  augmentation: str = None, flare_thresh: float = 1e-5, feature_cols:list =None, 
-                 test: str = '', file_col:str='filename', channels=7,maxvals=300):
+                 test: str = '', file_col:str='filename', channels=7,maxvals=(300,)):
         super().__init__()
         self.zarr_file = zarr_file
         self.data_file = data_file
@@ -159,10 +161,10 @@ class AIAHMIDataModule(pl.LightningDataModule):
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
         df_test,df_pseudotest,df_train,df_val = split_data(self.df,self.val_split,self.test)
-        inds_test = np.where(self.df['sample_time'].isin(df_test['sample_time']))
-        inds_pseudotest = np.where(self.df['sample_time'].isin(df_pseudotest['sample_time']))
-        inds_train = np.where(self.df['sample_time'].isin(df_train['sample_time']))
-        inds_val = np.where(self.df['sample_time'].isin(df_val['sample_time']))
+        inds_test = np.where(self.df['sample_time'].isin(df_test['sample_time']))[0]
+        inds_pseudotest = np.where(self.df['sample_time'].isin(df_pseudotest['sample_time']))[0]
+        inds_train = np.where(self.df['sample_time'].isin(df_train['sample_time']))[0]
+        inds_val = np.where(self.df['sample_time'].isin(df_val['sample_time']))[0]
 
         # scale input features
         if len(self.feature_cols)>0:
