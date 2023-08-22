@@ -93,12 +93,13 @@ class AIAHMIDataModule(pl.LightningDataModule):
             flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
             feature_cols (list):    list of columns names for scalar features
             test (str):             which test set to choose (test_a or test_b else both)
+            channels (list or int): channels in zarr dataset
             maxvals (list or float):min-max scaling parameters
     """
     def __init__(self, zarr_file:str, data_file:str, regression:bool=False, 
                  val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
-                 augmentation: str = None, flare_thresh: float = 1e-5,
-                 feature_cols:list =None, test: str = '', file_col:str='filename', maxvals=300):
+                 augmentation: str = None, flare_thresh: float = 1e-5, feature_cols:list =None, 
+                 test: str = '', file_col:str='filename', channels=7,maxvals=300):
         super().__init__()
         self.zarr_file = zarr_file
         self.data_file = data_file
@@ -112,6 +113,7 @@ class AIAHMIDataModule(pl.LightningDataModule):
         self.feature_cols = feature_cols
         self.test = test
         self.file_col = file_col
+        self.channels = channels
         self.maxvals = maxvals
         self.label='flare'
 
@@ -174,15 +176,18 @@ class AIAHMIDataModule(pl.LightningDataModule):
         self.train_set = ZarrDataSet(df_train,self.zarr_file,inds_train,
                                      transform=self.training_transform,
                                      feature_cols=self.feature_cols,
+                                     channels=self.channels,
                                      maxvals=self.maxvals)
         self.val_set = ZarrDataSet(df_val,self.zarr_file,inds_val,
                                      transform=self.transform,
                                      feature_cols=self.feature_cols,
+                                     channels=self.channels,
                                      maxvals=self.maxvals)
         self.trainval_set = ZarrDataSet(pd.concat([df_train,df_val]),self.zarr_file,
                                      np.append(inds_train,inds_val),
                                      transform=self.transform,
                                      feature_cols=self.feature_cols,
+                                     channels=self.channels,
                                      maxvals=self.maxvals)
         self.pseudotest_set = ZarrDataSet(df_pseudotest,self.zarr_file,inds_pseudotest,
                                      transform=self.transform,
