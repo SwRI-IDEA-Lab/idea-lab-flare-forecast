@@ -27,8 +27,11 @@ class ZarrDataTest(unittest.TestCase):
             transforms.ToTensor(),
             transforms.Resize(self.dim,transforms.InterpolationMode.BILINEAR,antialias=True),
         ])
-        self.hmidataset = ZarrDataSet(self.df,self.zarrfile,self.label,self.transform,channels=7,maxvals=300)
-        self.aiahmidataset = ZarrDataSet(self.df,self.zarrfile,self.label,self.transform,channels=self.channels,maxvals=[500,1000,300])
+        self.hmidataset = ZarrDataSet(self.df,self.zarrfile,
+                                      label=self.label,transform=self.transform,
+                                      channels=7,maxvals=300)
+        self.aiahmidataset = ZarrDataSet(self.df,self.zarrfile,label=self.label,
+                                         transform=self.transform,channels=self.channels,maxvals=[500,1000,300])
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.datamodule = AIAHMIDataModule(self.zarrfile,self.datafile,regression=True,
                                            val_split=0,dim=self.dim,channels=self.channels,maxvals=[500,1000,300])
