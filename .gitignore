@@ -134,6 +134,7 @@ dmypy.json
 *.csv
 *.fits
 *.ods
+*.zarr
 
 # log files
 src/lightning_logs/*
