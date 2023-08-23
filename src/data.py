@@ -197,7 +197,7 @@ class MagnetogramDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # load dataframe
         self.df = pd.read_csv(self.data_file)
-        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'],format='mixed')
+        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'])
         # define high flux based on total unsigned flux threshold (for pretraining)
         self.df['high_flux'] = (self.df['tot_us_flux'] >= self.flux_thresh).astype(int)
         # define flare label based on desired forecast window and regression or classification task
