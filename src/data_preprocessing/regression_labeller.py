@@ -90,7 +90,7 @@ def fix_artifacts(goes_ts):
 
 class Labeler():
     def __init__(self,index_file:str = None,out_file:str = None,flare_catalog:str = None,
-                 flare_windows:list=[24],goes_dir:str='Data/goes/',nworkers:int=8):
+                 flare_windows:list=[24],goes_dir:str='Data/goes/',nworkers:int=4):
         """
         Initialize a labeling class to select best available data and add flare labels
 
@@ -360,16 +360,17 @@ def parse_args(args=None):
                         type=str,
                         help='filename to save labels data'
                         )
+    parser.add_argument('goesdir',
+                        type=str,
+                        help='path to GOES data',
+                        )
     parser.add_argument('-w','--flare_windows',
                         type=int,
                         nargs='*',
                         default=[12,24,48],
                         help='forecast windows for labeling, in hours'
                         )
-    parser.add_argument('goesdir',
-                        type=str,
-                        help='path to GOES data',
-                        )
+
 
     return parser.parse_args(args)
 
@@ -382,7 +383,7 @@ def main():
     # create labeler instance
     labeler = Labeler(parser.index_file, parser.out_file,
                       flare_catalog,parser.flare_windows,
-                      goes_dir=parser.goes_dir)
+                      goes_dir=parser.goesdir)
     labeler.write_header()
     labeler.label_data()
 

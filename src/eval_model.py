@@ -66,7 +66,7 @@ def main():
                                  weights=[],dropoutRatio=config.model['dropout_ratio'])
 
     # load checkpoint
-    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model)
+    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model,litclass=litclass)
 
     for name, layer in model.named_modules():
         if isinstance(layer, torch.nn.Linear):
