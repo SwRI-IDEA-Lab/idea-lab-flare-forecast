@@ -35,3 +35,28 @@ class FocalLoss(torch.nn.Module):
         if self.reduction == 'mean': return loss.mean()
         elif self.reduction == 'sum': return loss.sum()
         else: return loss
+
+class WeightedMSELoss(torch.nn.Module):
+    """
+    MSE loss weighted by the true value: (y-y')^2*y 
+
+    Parameters:
+        reduction (str):    mean, sum or none
+    """
+    __constants__ = ['reduction']
+
+    def __init__(self,eps:float=0.1,reduction: str = 'mean'):
+        super().__init__()
+        self.eps = torch.Tensor([eps])
+        self.reduction = reduction
+
+
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        target = target.type_as(input.data)
+
+        mse = F.mse_loss(input,target,reduction='none')
+        loss = mse*(target+self.eps)
+        
+        if self.reduction == 'mean': return loss.mean()
+        elif self.reduction == 'sum': return loss.sum()
+        else: return loss
