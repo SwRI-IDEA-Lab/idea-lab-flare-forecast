@@ -65,9 +65,10 @@ class ZarrDataSet(Dataset):
             img = np.expand_dims(img,axis=0)
 
         img = np.nan_to_num(img)
+        img[np.where(img < 1)] = 1
         # max scaling, TODO: change this to a torch transform
         for i in range(np.shape(img)[0]):
-            img[i,:,:] = img[i,:,:]/self.maxvals[i]
+            img[i,:,:] = np.log10(img[i,:,:])/self.maxvals[i]
 
         label = self.label_frame.iloc[idx]
         features = torch.Tensor(self.features.iloc[idx])
@@ -130,7 +131,7 @@ class AIAHMIDataModule(pl.LightningDataModule):
                 transforms.ToTensor(),
                 transforms.Resize(dim,transforms.InterpolationMode.BILINEAR,antialias=True),
                 transforms.RandomVerticalFlip(p=0.5),
-                RandomPolaritySwitch(p=0.5),
+                # RandomPolaritySwitch(p=0.5),
             ])
         elif augmentation == 'full':
             self.training_transform =  transforms.Compose([
@@ -139,7 +140,7 @@ class AIAHMIDataModule(pl.LightningDataModule):
                 transforms.RandomVerticalFlip(p=0.5),
                 transforms.RandomHorizontalFlip(p=0.5),
                 transforms.RandomRotation(20),
-                RandomPolaritySwitch(p=0.5)
+                # RandomPolaritySwitch(p=0.5)
             ])
         else:
             self.training_transform = self.transform

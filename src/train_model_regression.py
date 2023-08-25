@@ -62,7 +62,7 @@ def main():
                             feature_cols=config.data['feature_cols'],
                             test=config.data['test'],
                             channels=config.data['channels'],
-                            maxval=config.data['maxval'],)
+                            maxvals=config.data['maxval'],)
 
     # train MLP model to obtain weights for final layers of CNN+MLP
     if len(config.data['feature_cols'])>0:
