@@ -78,6 +78,7 @@ def print_regression_metrics(ypred,y,printresults=False):
         results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
                                 std, pos mean, pos_std, neg mean, neg_std, max output)
     """
+
     mse = (sum((ypred*6-y*6)**2))/len(ypred)
     mae = sum(abs(ypred*6-y*6))/len(ypred)
     r2 = r2_score(y*6,ypred*6)
@@ -85,6 +86,45 @@ def print_regression_metrics(ypred,y,printresults=False):
     results = [mse,mae,r2]
     if printresults:
         print('MSE, MAE, R2')
+        print(results)
+    return results
+
+def regression_to_binary_metrics(ypred,y,thresh:float=3.5/6,printresults=False):
+    """
+    Calculate binary metrics based on regression predictions
+    
+    Parameters:
+        ypred (np array):       array of predicted outputs
+        y (np array):           corresponding true outputs
+        thresh (float):         threshold for positive class
+        printresults (bool):    flag to print out results or 
+    
+    Returns:
+        results (list):         calculated metrics (MSE, BSS, APS, Gini, ECE, MCE, 
+                                std, pos mean, pos_std, neg mean, neg_std, max output)
+    """
+    y_binary = y>=thresh
+    ypred_binary = ypred>=thresh
+
+    C = confusion_matrix(y_binary,ypred_binary)
+    tp = C[1,1]
+    tn = C[0,0]
+    fp = C[0,1]
+    fn = C[1,0]
+
+    tss = (tp) / (tp + fn) - (fp) / (fp + tn)
+    hss = 2*(tp*tn-fp*fn)/((tp+fp)*(fp+tn)+(tp+fn)*(fn+tn))
+    tpr = tp/(tp+fn)
+    fpr = fp/(fp+tn)
+
+    acc_subC = sum(ypred_binary<2.5/6 & y_binary<2.5/6)/sum(y_binary<2.5/6) 
+    acc_subM = sum(ypred_binary<3.5/6 & y_binary<3.5/6)/sum(y_binary<3.5/6) 
+    mse_Cplus = (sum((ypred[y>=2.5/6]*6-y[y>=2.5/6]*6)**2))/sum(y>=2.5/6)
+    mse_Mplus = (sum((ypred[y>=3.5/6]*6-y[y>=3.5/6]*6)**2))/sum(y>=3.5/6)
+    results = [tss,hss,tpr,fpr,acc_subC,acc_subM,mse_Cplus,mse_Mplus]
+
+    if printresults:
+        print('TSS','HSS','TPR','FPR','acc_subC','acc_subM','mse_Cplus','mse_Mplus')
         print(results)
     return results
 
