@@ -70,7 +70,7 @@ class ZarrDataSet(Dataset):
         # max scaling, TODO: change this to a torch transform
         for i in range(np.shape(img)[0]):
             if self.channels[i] != 'hmilos':
-                img[i,np.where(img[i,:,:]<1)] = 1
+                img[i,img[i,:,:]<1] = 1
                 img[i,:,:] = np.log10(img[i,:,:])
             img[i,:,:] = img[i,:,:]/self.maxvals[i]
 

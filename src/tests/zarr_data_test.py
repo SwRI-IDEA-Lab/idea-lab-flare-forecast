@@ -23,7 +23,7 @@ class ZarrDataTest(unittest.TestCase):
         self.df['flare'] = (self.df['xrsb_max_in_24h']>=1e-5).astype(int)
         self.labels = [0,1]
         self.dim = 256
-        self.channels=[0,3,7]
+        self.channels=[3,5,7]
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize(self.dim,transforms.InterpolationMode.BILINEAR,antialias=True),
@@ -32,7 +32,7 @@ class ZarrDataTest(unittest.TestCase):
                                       label=self.label,transform=self.transform,
                                       channels=7,maxvals=(300,))
         self.aiahmidataset = ZarrDataSet(self.df,self.zarrfile,self.df.index,label=self.label,
-                                         transform=self.transform,channels=self.channels,maxvals=(500,1000,300))
+                                         transform=self.transform,channels=self.channels,maxvals=(5,5,300))
         self.idx = 0        # index into dataset (must be within length of self.dataset)
         self.datamodule = AIAHMIDataModule(self.zarrfile,self.datafile,regression=True,
                                            val_split=0,dim=self.dim,channels=self.channels,maxvals=(500,1000,300))
@@ -60,17 +60,18 @@ class ZarrDataTest(unittest.TestCase):
         self.assertEqual(item2[1].shape,(len(self.channels),self.dim,self.dim))
 
 
-    # def test_dataNormalization(self):
-    #     for idx in range(np.min([len(self.dataset),10])):
-    #         item = self.dataset[idx]
-    #         data = item[1]
-    #         self.assertLessEqual(torch.max(torch.abs(data)),1)
-    #         plt.figure()
-    #         plt.imshow(data[0,:,:],vmin=-1,vmax=1)
-    #         plt.colorbar()
-    #         plt.title(item[0].split('/')[-1]+' flare label: '+str(item[2]))
-    #         plt.savefig('src/tests/test_img_'+str(idx)+'.png')
-    #         plt.close()
+    def test_dataNormalization(self):
+        for idx in range(0,np.min([len(self.aiahmidataset),1000]),100):
+            item = self.aiahmidataset[idx]
+            data = item[1]
+            self.assertLessEqual(torch.max(data[0,:,:]),5)
+            self.assertGreaterEqual(torch.min(data[0,:,:]),0)
+            plt.figure()
+            plt.imshow(data[0,:,:],vmin=0,vmax=2)
+            plt.colorbar()
+            plt.title(str(item[0])+' flare label: '+str(item[3]))
+            plt.savefig('src/tests/test_img_'+str(idx)+'.png')
+            plt.close()
 
     def test_datamoduleLoadData(self):
         self.datamodule.prepare_data()
