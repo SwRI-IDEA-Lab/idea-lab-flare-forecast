@@ -1,7 +1,8 @@
 data:
   augmentation: conservative
   balance_ratio: 0
-  channels: 3
+  channels: 
+  - 3
   data_file: Data/labels_regression_aiahmi.csv
   dim: 128
   feature_cols: []
