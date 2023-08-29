@@ -55,7 +55,7 @@ class WeightedMSELoss(torch.nn.Module):
         target = target.type_as(input.data)
 
         mse = F.mse_loss(input,target,reduction='none')
-        loss = mse*(target+self.eps)
+        loss = mse*(target+self.eps.type_as(input.data))
         
         if self.reduction == 'mean': return loss.mean()
         elif self.reduction == 'sum': return loss.sum()

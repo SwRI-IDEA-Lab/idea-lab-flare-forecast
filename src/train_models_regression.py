@@ -36,6 +36,6 @@ if not os.path.exists(config['testing']['savedir']):
     os.makedirs(config['testing']['savedir'])
 
 if config['testing']['eval']:
-    df,df_trainval = create_ensemble_df_regression(run_ids,
+    df,df_trainval,_ = create_ensemble_df_regression(run_ids,
                         config['testing']['savedir']+'/metrics_'+config['testing']['savefile'],
                         rootdir='',pseudotest=True)
