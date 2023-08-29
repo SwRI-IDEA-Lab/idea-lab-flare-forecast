@@ -27,13 +27,13 @@ class ZarrDataSet(Dataset):
             zarr_group (str):       Subhierarchy label within zarr dataset
             transform:              torchvision transforms to apply to data (default is ToTensor())
             feature_cols (list):    names of scalar feature columns
-	        channels (tuple):	indices of channels to extract
-            maxvals (tuple):        scaling values for data, must be same length as channels
+	        channels (list or int):	indices of channels to extract
+            maxvals (list or tuple):        scaling values for data, must be same length as channels
 
     """
     def __init__(self,df,zarr_file:str,indices:list,label:str='flare',
                  zarr_group:str='aia_hmi',transform=transforms.ToTensor(),
-                 feature_cols:list=None,channels=(7,),maxvals=(300,)):
+                 feature_cols:list=None,channels=7,maxvals=(300,)):
         self.data = xr.open_zarr(zarr_file)
         self.zarr_group = zarr_group
         self.indices = indices
@@ -43,6 +43,8 @@ class ZarrDataSet(Dataset):
         if feature_cols == None:
             feature_cols = []
         self.features = df.loc[:,feature_cols]
+        if isinstance(channels,int):
+            channels = [channels]
         self.channels = self.data.channel[channels].data
         self.maxvals = maxvals
         
@@ -65,10 +67,10 @@ class ZarrDataSet(Dataset):
             img = np.expand_dims(img,axis=0)
 
         img = np.nan_to_num(img)
-        img[np.where(img < 1)] = 1
         # max scaling, TODO: change this to a torch transform
         for i in range(np.shape(img)[0]):
             if self.channels[i] != 'hmilos':
+                img[i,np.where(img[i,:,:]<1)] = 1
                 img[i,:,:] = np.log10(img[i,:,:])
             img[i,:,:] = img[i,:,:]/self.maxvals[i]
 
@@ -98,13 +100,13 @@ class AIAHMIDataModule(pl.LightningDataModule):
             flare_thresh (float):   threshold for peak flare intensity to label as positive (default 1e-5, M flare)
             feature_cols (list):    list of columns names for scalar features
             test (str):             which test set to choose (test_a or test_b else both)
-            channels (tuple):       channels in zarr dataset
+            channels (list or int):       channels in zarr dataset
             maxvals (tuple):        min-max scaling parameters
     """
     def __init__(self, zarr_file:str, data_file:str, regression:bool=False, 
                  val_split:int=1, forecast_window: int = 24, dim: int = 256, batch: int = 32, 
                  augmentation: str = None, flare_thresh: float = 1e-5, feature_cols:list =None, 
-                 test: str = '', file_col:str='filename', channels=(7,),maxvals=(300,)):
+                 test: str = '', file_col:str='filename', channels=7,maxvals=(300,)):
         super().__init__()
         self.zarr_file = zarr_file
         self.data_file = data_file
@@ -156,10 +158,11 @@ class AIAHMIDataModule(pl.LightningDataModule):
             self.df['flare'] = self.df['xrsb_max_in_'+str(self.forecast_window)+'h']
             self.df['flare'] = (np.log10(self.df['flare'])+8.5)/6
             self.p_thresh = (np.log10(self.flare_thresh)+8.5)/6
-            self.df.loc[self.df['flare']<0,'flare'] = 0
-            self.df = self.df.dropna(axis=0,subset='flare')
+            self.df.loc[self.df['flare']<0,'flare'] = 0           
         else:
             self.df['flare'] = (self.df['xrsb_max_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
+            self.p_thresh = 0.5
+        self.df = self.df.dropna(axis=0,subset='flare')
 
     def setup(self,stage: str):
         # performs data splitting and initializes datasets
@@ -197,11 +200,11 @@ class AIAHMIDataModule(pl.LightningDataModule):
         self.pseudotest_set = ZarrDataSet(df_pseudotest,self.zarr_file,inds_pseudotest,
                                      transform=self.transform,
                                      feature_cols=self.feature_cols,
-                                     maxvals=self.maxvals)
+                                     channels=self.channels, maxvals=self.maxvals)
         self.test_set = ZarrDataSet(df_test,self.zarr_file,inds_test, 
                                      transform=self.transform,
-                                     feature_cols=self.feature_cols,
-                                     maxvals=self.maxvals)
+                                     feature_cols=self.feature_cols, 
+                                     channels=self.channels, maxvals=self.maxvals)
         print('Train:',len(self.train_set),
               'Valid:',len(self.val_set),
               'Pseudo-test:',len(self.pseudotest_set),

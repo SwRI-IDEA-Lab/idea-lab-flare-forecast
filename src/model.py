@@ -320,14 +320,14 @@ class LitConvNet(pl.LightningModule):
         fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
         # forward pass
-        y_hat = self.model(x,f)
+        y_hat = self.model(x,f) 
         val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
         self.val_acc(y_hat,y)
         self.val_aps(y_hat,y)
         self.val_f1(y_hat,y)
-        self.val_mse(y_hat*6-8.5,y*6-8.5)
+        self.val_mse(y_hat,y)
         self.val_confusion_matrix.update(y_hat,y)
 
         self.log_dict({

@@ -1,7 +1,7 @@
 data:
   augmentation: conservative
   balance_ratio: 0
-  channels: (3,)
+  channels: 3
   data_file: Data/labels_regression_aiahmi.csv
   dim: 128
   feature_cols:
@@ -15,9 +15,10 @@ data:
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
   forecast_window: 24
-  label: high_flux
-  maxval: (5,)
-  regression: true
+  label: flare
+  maxval:
+  - 5
+  regression: false
   test: ''
   val_split: 0
   zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_1k.zarr
@@ -31,7 +32,7 @@ model:
   dropout_ratio: 0
   load_checkpoint: false
 testing:
-  eval: false
+  eval: true
   savedir: results
   savefile: 24h_aia193
 training:
