@@ -10,14 +10,13 @@ class convnet_sc(nn.Module):
 
     Parameters:
         dim (int):    square dimension of input image
-        length (int): number of images in a sequence
+        length (int): number of images in a sequence (or number of channels)
         dropoutRatio (float):   percentage of disconnections for Dropout
-
     """
     def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
         self.block1 = nn.Sequential(
-            nn.Conv2d(1, 32, (3,3),padding='same'),
+            nn.Conv2d(length, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))

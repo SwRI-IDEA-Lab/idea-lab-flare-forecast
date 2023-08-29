@@ -81,7 +81,7 @@ def main():
         weights = []
     
     # initialize model
-    model = convnet_sc(dim=config.data['dim'],length=1,
+    model = convnet_sc(dim=config.data['dim'],length=len(config.data['channels']),
                                  len_features=len(config.data['feature_cols']),
                                  weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
@@ -111,8 +111,7 @@ def main():
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                         logger=wandb_logger,
-                         precision=16)
+                         logger=wandb_logger)
     trainer.fit(model=classifier,datamodule=data)
 
     # test trained model

@@ -4,13 +4,7 @@ data:
   channels: 3
   data_file: Data/labels_regression_aiahmi.csv
   dim: 128
-  feature_cols:
-  - flare_rate_y
-  - flare_rate_m
-  - flare_rate_w
-  - max_flare_72h
-  - max_flare_48h
-  - max_flare_24h
+  feature_cols: []
   file_col: filename
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
