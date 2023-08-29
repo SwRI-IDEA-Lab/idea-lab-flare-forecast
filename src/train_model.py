@@ -7,6 +7,7 @@ from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
+from data_zarr import AIAHMIDataModule
 from linear_model import LinearModel
 from utils.model_utils import *
 import pandas as pd
@@ -34,21 +35,34 @@ def main():
     print('Features:',config.data['feature_cols'])
 
     # define data module
-    data = MagnetogramDataModule(data_file=config.data['data_file'],
-                                 label=config.data['label'],
-                                 balance_ratio=config.data['balance_ratio'],
-                                 regression=config.data['regression'],
-                                 val_split=config.data['val_split'],
-                                 forecast_window=config.data['forecast_window'],
-                                 dim=config.data['dim'],
-                                 batch=config.training['batch_size'],
-                                 augmentation=config.data['augmentation'],
-                                 flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'],
-                                 feature_cols=config.data['feature_cols'],
-                                 test=config.data['test'],
-                                 maxval=config.data['maxval'],
-                                 file_col=config.data['file_col'])
+    # data = MagnetogramDataModule(data_file=config.data['data_file'],
+    #                              label=config.data['label'],
+    #                              balance_ratio=config.data['balance_ratio'],
+    #                              regression=config.data['regression'],
+    #                              val_split=config.data['val_split'],
+    #                              forecast_window=config.data['forecast_window'],
+    #                              dim=config.data['dim'],
+    #                              batch=config.training['batch_size'],
+    #                              augmentation=config.data['augmentation'],
+    #                              flare_thresh=config.data['flare_thresh'],
+    #                              flux_thresh=config.data['flux_thresh'],
+    #                              feature_cols=config.data['feature_cols'],
+    #                              test=config.data['test'],
+    #                              maxval=config.data['maxval'],
+    #                              file_col=config.data['file_col'])
+    
+    data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+                            data_file=config.data['data_file'],
+                            regression=config.data['regression'],
+                            forecast_window=config.data['forecast_window'],
+                            dim=config.data['dim'],
+                            batch=config.training['batch_size'],
+                            augmentation=config.data['augmentation'],
+                            flare_thresh=config.data['flare_thresh'],
+                            feature_cols=config.data['feature_cols'],
+                            test=config.data['test'],
+                            channels=config.data['channels'],
+                            maxvals=config.data['maxval'],)
 
     # train LR model to obtain weights for final layer of CNN+LR
     if len(config.data['feature_cols'])>0:
