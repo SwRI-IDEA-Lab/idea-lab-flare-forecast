@@ -58,7 +58,7 @@ class convnet_sc(nn.Module):
             nn.Sigmoid()
         )
         
-        self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
+        self.forward(torch.ones(1,length,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
 
         # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
@@ -88,8 +88,7 @@ class convnet_sc(nn.Module):
             module.bias.data.zero_()
 
 
-    def forward(self,x,f):
-        
+    def forward(self,x,f):       
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
@@ -97,7 +96,7 @@ class convnet_sc(nn.Module):
         x = self.block5(x)
         x = x.view(x.shape[0],-1)
         x = self.fcl(x)
-
+      
         # # append features
         # x = torch.cat([x,f],dim=1)
         # x = self.fcl2(x)
