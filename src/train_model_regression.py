@@ -81,7 +81,7 @@ def main():
         weights = []
     
     # initialize model
-    model = convnet_sc_regressor(dim=config.data['dim'],length=1,
+    model = convnet_sc_regressor(dim=config.data['dim'],length=len(config.data['channels']),
                                  len_features=len(config.data['feature_cols']),
                                  weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNetRegressor(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
