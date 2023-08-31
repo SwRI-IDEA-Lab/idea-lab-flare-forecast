@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
 import torchmetrics
+# from src.losses import WeightedMSELoss
 
 class convnet_sc_regressor(nn.Module):
     """ 
@@ -19,7 +20,7 @@ class convnet_sc_regressor(nn.Module):
         self.len_features = len_features
 
         self.block1 = nn.Sequential(
-            nn.Conv2d(1, 32, (3,3),padding='same'),
+            nn.Conv2d(length, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
@@ -70,7 +71,7 @@ class convnet_sc_regressor(nn.Module):
             nn.Linear(100,1),   
         )
         
-        self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
+        self.forward(torch.ones(1,length,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
 
         # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
@@ -218,7 +219,8 @@ class LitConvNetRegressor(pl.LightningModule):
         self.epochs = epochs
 
         # define loss function
-        self.loss = nn.MSELoss()   
+        # self.loss = WeightedMSELoss()   
+        self.loss = nn.MSELoss()
 
         # define metrics
         self.val_mse = torchmetrics.MeanSquaredError()

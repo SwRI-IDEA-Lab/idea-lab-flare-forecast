@@ -71,9 +71,13 @@ class ZarrDataSet(Dataset):
         for i in range(np.shape(img)[0]):
             if self.channels[i] != 'hmilos':
                 img[i,img[i,:,:]<1] = 1
-                img[i,:,:] = np.log10(img[i,:,:])
-            img[i,:,:] = img[i,:,:]/self.maxvals[i]
-
+                img[i,img[i,:,:]>self.maxvals[i]] = self.maxvals[i]
+                img[i,:,:] = np.log10(img[i,:,:])/self.maxvals[i]
+            else:
+                img[i,img[i,:,:]<-self.maxvals[i]] = -self.maxvals[i]
+                img[i,img[i,:,:]>self.maxvals[i]] = self.maxvals[i]
+                img[i,:,:] = (img[i,:,:]+self.maxvals[i])/2/self.maxvals[i]
+            
         label = self.label_frame.iloc[idx]
         features = torch.Tensor(self.features.iloc[idx])
 

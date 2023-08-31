@@ -53,6 +53,7 @@ def main():
     
     data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
                             data_file=config.data['data_file'],
+                            val_split=config.data['val_split'],
                             regression=config.data['regression'],
                             forecast_window=config.data['forecast_window'],
                             dim=config.data['dim'],
@@ -103,7 +104,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=10,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=20,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
