@@ -1,5 +1,5 @@
 import sys,os
-sys.path.append(os.getcwd())
+says.path.append(os.getcwd())
 
 import torch
 import pytorch_lightning as pl
@@ -52,6 +52,7 @@ def main():
     #                              file_col=config.data['file_col'])
     
     data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+                            val_split=config.data['val_split'],
                             data_file=config.data['data_file'],
                             regression=config.data['regression'],
                             forecast_window=config.data['forecast_window'],
