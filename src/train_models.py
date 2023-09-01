@@ -17,7 +17,7 @@ for i in range(val_splits):
 
     # first pretrain
     config['data']['label'] = 'flare'
-    config['data']['augmentation'] = 'conservative'
+    config['data']['augmentation'] = 'full'
     config['model']['checkpoint_location'] = None
     config['model']['load_checkpoint'] = False
     config['testing']['eval'] = True
