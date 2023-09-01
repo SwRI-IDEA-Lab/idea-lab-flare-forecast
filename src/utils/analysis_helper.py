@@ -117,14 +117,14 @@ def regression_to_binary_metrics(ypred,y,thresh:float=3.5/6,printresults=False):
     tpr = tp/(tp+fn)
     fpr = fp/(fp+tn)
 
-    acc_subC = sum((ypred_binary<2.5/6) & (y_binary<2.5/6))/sum(y_binary<2.5/6) 
-    acc_subM = sum((ypred_binary<3.5/6 )& (y_binary<3.5/6))/sum(y_binary<3.5/6) 
+    acc_quiet_subC = sum((ypred<2.5/6)&(y<2.5/6))/sum(y<2.5/6) 
+    acc_quiet_subM = sum((ypred<3.5/6)&(y<2.5/6))/sum(y<2.5/6) 
     mse_Cplus = (sum((ypred[y>=2.5/6]*6-y[y>=2.5/6]*6)**2))/sum(y>=2.5/6)
     mse_Mplus = (sum((ypred[y>=3.5/6]*6-y[y>=3.5/6]*6)**2))/sum(y>=3.5/6)
-    results = [tss,hss,tpr,fpr,acc_subC,acc_subM,mse_Cplus,mse_Mplus]
+    results = [tss,hss,tpr,fpr,acc_quiet_subC,acc_quiet_subM,mse_Cplus,mse_Mplus]
 
     if printresults:
-        print('TSS','HSS','TPR','FPR','acc_subC','acc_subM','mse_Cplus','mse_Mplus')
+        print('TSS','HSS','TPR','FPR','acc_quiet_subC','acc_quiet_subM','mse_Cplus','mse_Mplus')
         print(results)
     return results
 
