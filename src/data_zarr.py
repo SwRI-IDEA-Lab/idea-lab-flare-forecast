@@ -71,7 +71,6 @@ class ZarrDataSet(Dataset):
         for i in range(np.shape(img)[0]):
             if self.channels[i] != 'hmilos':
                 img[i,img[i,:,:]<1] = 1
-                img[i,img[i,:,:]>self.maxvals[i]] = self.maxvals[i]
                 img[i,:,:] = np.log10(img[i,:,:])/self.maxvals[i]
             else:
                 img[i,img[i,:,:]<-self.maxvals[i]] = -self.maxvals[i]
@@ -162,7 +161,7 @@ class AIAHMIDataModule(pl.LightningDataModule):
             self.df['flare'] = self.df['xrsb_max_in_'+str(self.forecast_window)+'h']
             self.df['flare'] = (np.log10(self.df['flare'])+8.5)/6
             self.p_thresh = (np.log10(self.flare_thresh)+8.5)/6
-            self.df.loc[self.df['flare']<0,'flare'] = 0           
+            # self.df.loc[self.df['flare']<0,'flare'] = 0           
         else:
             self.df['flare'] = (self.df['xrsb_max_in_'+str(self.forecast_window)+'h']>=self.flare_thresh).astype(int)
             self.p_thresh = 0.5
