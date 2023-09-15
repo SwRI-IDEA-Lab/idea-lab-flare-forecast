@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model import convnet_sc,LitConvNet
 from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
+from data_zarr import AIAHMIDataModule
 from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
@@ -44,29 +45,43 @@ def main():
     pl.seed_everything(42,workers=True)
 
     # define data module
-    data = MagnetogramDataModule(data_file=config.data['data_file'],
-                                 label=config.data['label'],
-                                 balance_ratio=config.data['balance_ratio'],
-                                 regression=config.data['regression'],
-                                 val_split=config.data['val_split'],
-                                 forecast_window=config.data['forecast_window'],
-                                 dim=config.data['dim'],
-                                 batch=config.training['batch_size'],
-                                 augmentation=config.data['augmentation'],
-                                 flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'],
-                                 feature_cols=config.data['feature_cols'],
-                                 test=config.data['test'],
-                                 maxval=config.data['maxval'],
-                                 file_col=config.data['file_col'])
-
+    # data = MagnetogramDataModule(data_file=config.data['data_file'],
+    #                              label=config.data['label'],
+    #                              balance_ratio=config.data['balance_ratio'],
+    #                              regression=config.data['regression'],
+    #                              val_split=config.data['val_split'],
+    #                              forecast_window=config.data['forecast_window'],
+    #                              dim=config.data['dim'],
+    #                              batch=config.training['batch_size'],
+    #                              augmentation=config.data['augmentation'],
+    #                              flare_thresh=config.data['flare_thresh'],
+    #                              flux_thresh=config.data['flux_thresh'],
+    #                              feature_cols=config.data['feature_cols'],
+    #                              test=config.data['test'],
+    #                              maxval=config.data['maxval'],
+    #                              file_col=config.data['file_col'])
+    
+    data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+                            val_split=config.data['val_split'],
+                            data_file=config.data['data_file'],
+                            regression=config.data['regression'],
+                            forecast_window=config.data['forecast_window'],
+                            dim=config.data['dim'],
+                            batch=config.training['batch_size'],
+                            augmentation=config.data['augmentation'],
+                            flare_thresh=config.data['flare_thresh'],
+                            feature_cols=config.data['feature_cols'],
+                            test=config.data['test'],
+                            channels=config.data['channels'],
+                            maxvals=config.data['maxval'],)
+    
     # define model
-    model = modelclass(dim=config.data['dim'],length=1,
+    model = modelclass(dim=config.data['dim'],length=len(config.data['channels']),
                                  len_features=len(config.data['feature_cols']),
                                  weights=[],dropoutRatio=config.model['dropout_ratio'])
 
     # load checkpoint
-    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':best_k', model,litclass=litclass)
+    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':latest', model,litclass=litclass)
 
     for name, layer in model.named_modules():
         if isinstance(layer, torch.nn.Linear):
