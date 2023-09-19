@@ -319,7 +319,7 @@ def create_ensemble_df_regression(run_ids,metricsfile,pseudotest:bool=True,rootd
     metrics.append(print_regression_metrics(df_ensemble['ypred_mean'],df_ensemble['ytrue']))
     index.append('Ensemble Mean')
 
-    df_metrics = pd.DataFrame(data=np.array(metrics),index=index,columns=['MSE','MAE','R2'])
+    df_metrics = pd.DataFrame(data=np.array(metrics),index=index,columns=['MSE','MAE','R2','TSS','HSS','TPR','FPR','acc_quiet_subC','acc_quiet_subM','mse_Cplus','mse_Mplus'])
     df_metrics.to_csv(metricsfile+'.csv')
 
     return df_ensemble,df_trainval_ensemble,df_metrics
