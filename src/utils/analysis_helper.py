@@ -84,6 +84,8 @@ def print_regression_metrics(ypred,y,printresults=False):
     r2 = r2_score(y*6,ypred*6)
 
     results = [mse,mae,r2]
+    results.extend(regression_to_binary_metrics(ypred,y))
+    
     if printresults:
         print('MSE, MAE, R2')
         print(results)
@@ -443,7 +445,7 @@ def plot_timeseries(df,tstart,tend,goes=False,cal='yprob'):
         goes (bool):        whether to download the GOES timeseries data and plot it
         cal (str):          label for calibrated probabilities
     """
-    fig,ax = plt.subplots(figsize=(9,2.5))
+    fig,ax = plt.subplots(figsize=(10,3))
     if goes:
         result = Fido.search(a.Time(datetime.strftime(tstart,'%Y-%m-%d %H:%M'),datetime.strftime(tend,'%Y-%m-%d %H:%M')),a.Instrument('XRS'))
         file_goes = Fido.fetch(result)
