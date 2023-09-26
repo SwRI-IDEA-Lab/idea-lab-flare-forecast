@@ -11,9 +11,9 @@ from sunpy import timeseries as ts
 from sunpy.net import Fido
 from sunpy.net import attrs as a
 from sunpy.net.base_client import QueryResponseTable
+import sys
 
-
-root = 'Data/goes/'
+root = sys.argv[1]
 
 for year in range(1980,2023):
     if not os.path.exists(root+str(year)):
