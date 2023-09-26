@@ -32,7 +32,7 @@ for i in range(val_splits):
 
     config['data']['label'] = 'flare'
     config['data']['augmentation'] = 'conservative'
-    config['model']['checkpoint_location'] = 'kierav/flare-forecast/model-'+run_id+':best_k'
+    config['model']['checkpoint_location'] = config['meta']['user']+'/'+config['meta']['project']+'/model-'+run_id+':best_k'
     config['model']['load_checkpoint'] = True
     config['testing']['eval'] = True
     
