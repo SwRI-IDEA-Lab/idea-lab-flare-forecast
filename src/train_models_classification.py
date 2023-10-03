@@ -1,7 +1,7 @@
 # script for running multiple experiments
 import yaml
 from utils.analysis_helper import *
-import train_model
+import src.train_model_classification as train_model_classification
 import os
 
 with open('experiment_config.yml') as config_file:
@@ -16,30 +16,30 @@ for i in range(val_splits):
     config['data']['forecast_window'] =24
 
     # first pretrain
-    config['data']['label'] = 'flare'
-    config['data']['augmentation'] = 'full'
+    config['data']['label'] = 'high_flux'
+    config['data']['augmentation'] = 'conservative'
     config['model']['checkpoint_location'] = None
     config['model']['load_checkpoint'] = False
-    config['testing']['eval'] = True
+    config['testing']['eval'] = False
     with open('experiment_config.yml','w') as config_file:
         yaml.dump(config,config_file)
-    train_model.main()
+    train_model_classification.main()
 
     # # obtain run id and run train
-    # last_run = sorted(os.listdir('wandb'))[-1]
-    # run_id = last_run.split('-')[-1]
+    last_run = sorted(os.listdir('wandb'))[-1]
+    run_id = last_run.split('-')[-1]
     # run_id = highfluxmodels[i]
 
-    # config['data']['label'] = 'flare'
-    # config['data']['augmentation'] = 'conservative'
-    # config['model']['checkpoint_location'] = 'kierav/flare-forecast/model-'+run_id+':best_k'
-    # config['model']['load_checkpoint'] = True
-    # config['testing']['eval'] = True
+    config['data']['label'] = 'flare'
+    config['data']['augmentation'] = 'conservative'
+    config['model']['checkpoint_location'] = config['meta']['user']+'/'+config['meta']['project']+'/model-'+run_id+':best_k'
+    config['model']['load_checkpoint'] = True
+    config['testing']['eval'] = True
     
-    # with open('experiment_config.yml','w') as config_file:
-    #     yaml.dump(config,config_file)
+    with open('experiment_config.yml','w') as config_file:
+        yaml.dump(config,config_file)
 
-    # train_model.main()
+    train_model_classification.main()
 
     # save run id
     run_ids.append(sorted(os.listdir('wandb'))[-1].split('-')[-1])

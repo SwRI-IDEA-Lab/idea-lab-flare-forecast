@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from model import convnet_sc,LitConvNet
+from src.model_classifier import convnet_sc,LitConvNet
 from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
 from data_zarr import AIAHMIDataModule

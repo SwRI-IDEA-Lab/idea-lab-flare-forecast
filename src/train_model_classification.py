@@ -5,10 +5,9 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from model import convnet_sc,LitConvNet
+from src.model_classifier import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
-from data_zarr import AIAHMIDataModule
-from linear_model import LinearModel
+from src.linear_model_classifier import LinearModel
 from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
@@ -35,35 +34,21 @@ def main():
     print('Features:',config.data['feature_cols'])
 
     # define data module
-    # data = MagnetogramDataModule(data_file=config.data['data_file'],
-    #                              label=config.data['label'],
-    #                              balance_ratio=config.data['balance_ratio'],
-    #                              regression=config.data['regression'],
-    #                              val_split=config.data['val_split'],
-    #                              forecast_window=config.data['forecast_window'],
-    #                              dim=config.data['dim'],
-    #                              batch=config.training['batch_size'],
-    #                              augmentation=config.data['augmentation'],
-    #                              flare_thresh=config.data['flare_thresh'],
-    #                              flux_thresh=config.data['flux_thresh'],
-    #                              feature_cols=config.data['feature_cols'],
-    #                              test=config.data['test'],
-    #                              maxval=config.data['maxval'],
-    #                              file_col=config.data['file_col'])
-    
-    data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
-                            data_file=config.data['data_file'],
-                            val_split=config.data['val_split'],
-                            regression=config.data['regression'],
-                            forecast_window=config.data['forecast_window'],
-                            dim=config.data['dim'],
-                            batch=config.training['batch_size'],
-                            augmentation=config.data['augmentation'],
-                            flare_thresh=config.data['flare_thresh'],
-                            feature_cols=config.data['feature_cols'],
-                            test=config.data['test'],
-                            channels=config.data['channels'],
-                            maxvals=config.data['maxval'],)
+    data = MagnetogramDataModule(data_file=config.data['data_file'],
+                                 label=config.data['label'],
+                                 balance_ratio=config.data['balance_ratio'],
+                                 regression=config.data['regression'],
+                                 val_split=config.data['val_split'],
+                                 forecast_window=config.data['forecast_window'],
+                                 dim=config.data['dim'],
+                                 batch=config.training['batch_size'],
+                                 augmentation=config.data['augmentation'],
+                                 flare_thresh=config.data['flare_thresh'],
+                                 flux_thresh=config.data['flux_thresh'],
+                                 feature_cols=config.data['feature_cols'],
+                                 test=config.data['test'],
+                                 maxval=config.data['maxval'],
+                                 file_col=config.data['file_col'])
 
     # train LR model to obtain weights for final layer of CNN+LR
     if len(config.data['feature_cols'])>0:
@@ -82,7 +67,7 @@ def main():
         weights = []
     
     # initialize model
-    model = convnet_sc(dim=config.data['dim'],length=len(config.data['channels']),
+    model = convnet_sc(dim=config.data['dim'],length=1,
                                  len_features=len(config.data['feature_cols']),
                                  weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNet(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
@@ -104,7 +89,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=20,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=10,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
@@ -112,7 +97,8 @@ def main():
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
-                         logger=wandb_logger)
+                         logger=wandb_logger,
+                         precision=16)
     trainer.fit(model=classifier,datamodule=data)
 
     # test trained model

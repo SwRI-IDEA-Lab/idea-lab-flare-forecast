@@ -2,7 +2,7 @@ import sys,os
 sys.path.append(os.getcwd())
 
 import unittest
-from src.linear_model import LinearModel
+from src.linear_model_classifier import LinearModel
 import pandas as pd
 import numpy as np
 import torch

@@ -22,5 +22,18 @@ It takes a long time to index and clean the data (around 6 hours per year of dat
 
 To train a single model on a  8GB GeForce RTX 3070 Ti GPU takes about 1.5 hours. Using pretraining and the ensemble of 5 models will then take around 15 hours.
 
+### Regression onto max X-ray Irradiance
 
+To train the CNN ensemble to forecast the max X-ray irradiance instead of a probability of flaring requires some additional data preprocessing. It is recommended to first run the Snakemake pipeline and download historical magnetograms so the data is already indexed and cleaned, and there are trained classification models to use for pretraining the regression models.
 
+First download the GOES data by running:
+
+    python src/data_preprocessing/download_goes.py [goesdir]
+where [goesdir] is the path to store the GOES data at.
+
+Then label the data:
+
+    python src/data_preprocessing/regression_labeller.py Data/index_all_smoothed.csv [out_file] [goesdir] -w [window]
+with [out_file] the name of the labels file to be created, [goesdir] the path to the GOES data and [window] the desired forecast window(s) in hours.
+
+Now modify the experiment_config.yml appropriately and run something like the train_models_regression.py script. 

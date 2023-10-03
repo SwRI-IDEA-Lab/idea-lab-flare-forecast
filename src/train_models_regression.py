@@ -7,7 +7,7 @@ import os
 with open('experiment_config.yml') as config_file:
     config = yaml.safe_load(config_file.read())
 
-pseudotest_classifier_models = ['uyo4qwyp','qazuyg25','7yiwewej','7ns308th','avh2pkc1']
+pseudotest_classifier_models = ['uyo4qwyp','qazuyg25','7yiwewej','7ns308th','avh2pkc1'] # wandb run ids of classifier models for pretrained weights
 pseudotest_classifier_aiahmi_models = ['0d49hu0v','23u4f7nw','yquow5tx','ag90vus1','qkvaartc']
 run_ids = []
 val_splits = 5
@@ -18,8 +18,8 @@ for i in range(val_splits):
 
     run_id = pseudotest_classifier_aiahmi_models[i]
     config['data']['label'] = 'flare'
-    config['data']['augmentation'] = 'full'
-    config['model']['checkpoint_location'] = 'kierav/flare-forecast/model-'+run_id+':best_k'
+    config['data']['augmentation'] = 'conservative'
+    config['model']['checkpoint_location'] = config['meta']['user']+'/'+config['meta']['project']+'/model-'+run_id+':best_k'
     config['model']['load_checkpoint'] = True
     config['testing']['eval'] = True
     
