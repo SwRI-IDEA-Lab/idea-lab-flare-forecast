@@ -1,7 +1,7 @@
 # script for running multiple experiments
 import yaml
 from utils.analysis_helper import *
-import train_model
+import src.train_model_classification as train_model_classification
 import os
 
 with open('experiment_config.yml') as config_file:
@@ -23,7 +23,7 @@ for i in range(val_splits):
     config['testing']['eval'] = False
     with open('experiment_config.yml','w') as config_file:
         yaml.dump(config,config_file)
-    train_model.main()
+    train_model_classification.main()
 
     # # obtain run id and run train
     last_run = sorted(os.listdir('wandb'))[-1]
@@ -39,7 +39,7 @@ for i in range(val_splits):
     with open('experiment_config.yml','w') as config_file:
         yaml.dump(config,config_file)
 
-    train_model.main()
+    train_model_classification.main()
 
     # save run id
     run_ids.append(sorted(os.listdir('wandb'))[-1].split('-')[-1])

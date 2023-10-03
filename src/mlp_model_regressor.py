@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 class MLPModel():
     """
-        Logistic regression model for flare forecasting
+        MLP model for flare forecasting regression
     """
     def __init__(self,data_file:str,features:list,window:int,val_split:int=0,
                  flare_thresh:float=1e-5,hidden_layer_sizes=(100,)):

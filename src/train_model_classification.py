@@ -5,9 +5,9 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint 
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from model import convnet_sc,LitConvNet
+from src.model_classifier import convnet_sc,LitConvNet
 from data import MagnetogramDataModule
-from linear_model import LinearModel
+from src.linear_model_classifier import LinearModel
 from utils.model_utils import *
 import pandas as pd
 from pathlib import Path

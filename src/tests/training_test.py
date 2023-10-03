@@ -1,7 +1,7 @@
 import sys,os
 sys.path.append(os.getcwd())
 import unittest
-from src.model import convnet_sc, LitConvNet
+from src.model_classifier import convnet_sc, LitConvNet
 from src.data import MagnetogramDataSet
 import numpy as np
 import torch

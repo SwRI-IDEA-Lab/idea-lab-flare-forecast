@@ -151,6 +151,7 @@ wandb/*
 handouts
 notebooks/*.ipynb
 notebooks/Figures/*
+regression_paper/*
 
 # eval scripts
 src/eval_models.py

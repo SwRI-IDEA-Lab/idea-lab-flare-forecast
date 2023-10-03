@@ -1,4 +1,4 @@
-from model import LitConvNet
+from src.model_classifier import LitConvNet
 from model_regressor import LitConvNetRegressor
 import pandas as pd
 from pathlib import Path
@@ -19,6 +19,7 @@ def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True):
     Returns:
         classifier: litclass object with loaded weights
     """
+    #TODO: check local dir for model checkpoint if already downloaded
     print('Loading model checkpoint from ', ckpt_path)
     artifact = run.use_artifact(ckpt_path,type='model')
     artifact_dir = artifact.download()
