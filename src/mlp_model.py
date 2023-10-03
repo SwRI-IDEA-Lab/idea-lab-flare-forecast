@@ -29,7 +29,7 @@ class MLPModel():
     def prepare_data(self):
         # load and prep dataframe
         self.df = pd.read_csv(self.data_file)
-        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'])
+        self.df['sample_time'] = pd.to_datetime(self.df['sample_time'],format='mixed')
         self.df['flare'] = self.df['xrsb_max_in_'+str(self.window)+'h']
         self.df['flare'] = (np.log10(self.df['flare'])+8.5)/6
         self.p_thresh = (np.log10(self.flare_thresh)+8.5)/6

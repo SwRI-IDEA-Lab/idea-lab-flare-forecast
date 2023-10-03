@@ -1,5 +1,5 @@
 import sys,os
-says.path.append(os.getcwd())
+sys.path.append(os.getcwd())
 
 import torch
 import pytorch_lightning as pl
@@ -104,7 +104,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=10,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0001,patience=15,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
@@ -128,8 +128,8 @@ def main():
         save_preds(preds,wandb.run.dir,'trainval_results.csv',config.data['regression'])
 
         print('------Pseudotest predictions------')
-        preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
-        save_preds(preds,wandb.run.dir,'pseudotest_results.csv',config.data['regression'])
+        # preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+        # save_preds(preds,wandb.run.dir,'pseudotest_results.csv',config.data['regression'])
 
         print('------Test predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
