@@ -7,6 +7,7 @@ from pytorch_lightning.callbacks import ModelSummary, ModelCheckpoint
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
+from data_zarr import AIAHMIDataModule
 from src.mlp_model_regressor import MLPModel
 from utils.model_utils import *
 import pandas as pd
@@ -34,21 +35,36 @@ def main():
     print('Features:',config.data['feature_cols'])
 
     # define data module
-    data = MagnetogramDataModule(data_file=config.data['data_file'],
-                                 label=config.data['label'],
-                                 balance_ratio=config.data['balance_ratio'],
-                                 regression=config.data['regression'],
-                                 val_split=config.data['val_split'],
-                                 forecast_window=config.data['forecast_window'],
-                                 dim=config.data['dim'],
-                                 batch=config.training['batch_size'],
-                                 augmentation=config.data['augmentation'],
-                                 flare_thresh=config.data['flare_thresh'],
-                                 flux_thresh=config.data['flux_thresh'],
-                                 feature_cols=config.data['feature_cols'],
-                                 test=config.data['test'],
-                                 maxval=config.data['maxval'],
-                                 file_col=config.data['file_col'])
+    if not config.data['use_zarr_dataset']:
+        data = MagnetogramDataModule(data_file=config.data['data_file'],
+                                    label=config.data['label'],
+                                    balance_ratio=config.data['balance_ratio'],
+                                    regression=config.data['regression'],
+                                    val_split=config.data['val_split'],
+                                    forecast_window=config.data['forecast_window'],
+                                    dim=config.data['dim'],
+                                    batch=config.training['batch_size'],
+                                    augmentation=config.data['augmentation'],
+                                    flare_thresh=config.data['flare_thresh'],
+                                    flux_thresh=config.data['flux_thresh'],
+                                    feature_cols=config.data['feature_cols'],
+                                    test=config.data['test'],
+                                    maxval=config.data['maxval'],
+                                    file_col=config.data['file_col'])
+    else:
+        data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+                            val_split=config.data['val_split'],
+                            data_file=config.data['data_file'],
+                            regression=config.data['regression'],
+                            forecast_window=config.data['forecast_window'],
+                            dim=config.data['dim'],
+                            batch=config.training['batch_size'],
+                            augmentation=config.data['augmentation'],
+                            flare_thresh=config.data['flare_thresh'],
+                            feature_cols=config.data['feature_cols'],
+                            test=config.data['test'],
+                            channels=config.data['channels'],
+                            maxvals=config.data['maxval'],)
 
     # train MLP model to obtain weights for final layers of CNN+MLP
     if len(config.data['feature_cols'])>0:
@@ -67,7 +83,7 @@ def main():
         weights = []
     
     # initialize model
-    model = convnet_sc_regressor(dim=config.data['dim'],length=1,
+    model = convnet_sc_regressor(dim=config.data['dim'],length=len(config.data['channels']),
                                  len_features=len(config.data['feature_cols']),
                                  weights=weights,dropoutRatio=config.model['dropout_ratio'])
     classifier = LitConvNetRegressor(model,config.training['lr'],config.training['wd'],epochs=config.training['epochs'])
@@ -89,7 +105,7 @@ def main():
                                           save_last=True,
                                           save_weights_only=True,
                                           verbose=False)
-    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0002,patience=10,mode='min',strict=False,check_finite=False)
+    early_stop_callback = EarlyStopping(monitor='val_loss',min_delta=0.0001,patience=15,mode='min',strict=False,check_finite=False)
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],

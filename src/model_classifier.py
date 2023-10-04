@@ -10,14 +10,13 @@ class convnet_sc(nn.Module):
 
     Parameters:
         dim (int):    square dimension of input image
-        length (int): number of images in a sequence
+        length (int): number of images in a sequence (or number of channels)
         dropoutRatio (float):   percentage of disconnections for Dropout
-
     """
     def __init__(self, dim:int=256, length:int=1, len_features:int=0, weights=[], dropoutRatio:float=0.0):
         super().__init__()
         self.block1 = nn.Sequential(
-            nn.Conv2d(1, 32, (3,3),padding='same'),
+            nn.Conv2d(length, 32, (3,3),padding='same'),
             nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2,2), stride=(2,2))
@@ -59,7 +58,7 @@ class convnet_sc(nn.Module):
             nn.Sigmoid()
         )
         
-        self.forward(torch.ones(1,1,dim,dim),torch.ones(1,len_features))
+        self.forward(torch.ones(1,length,dim,dim),torch.ones(1,len_features))
         self.apply(self._init_weights)
 
         # coeff intercept for LR model on totus flux [[6.18252855]][-3.07028227]
@@ -89,8 +88,7 @@ class convnet_sc(nn.Module):
             module.bias.data.zero_()
 
 
-    def forward(self,x,f):
-        
+    def forward(self,x,f):       
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
@@ -98,7 +96,7 @@ class convnet_sc(nn.Module):
         x = self.block5(x)
         x = x.view(x.shape[0],-1)
         x = self.fcl(x)
-
+      
         # # append features
         # x = torch.cat([x,f],dim=1)
         # x = self.fcl2(x)
@@ -320,14 +318,14 @@ class LitConvNet(pl.LightningModule):
         fname, x, f, y = batch
         y = y.view(y.shape[0],-1)
         # forward pass
-        y_hat = self.model(x,f)
+        y_hat = self.model(x,f) 
         val_loss = self.loss(y_hat,y.type_as(y_hat))
 
         # calculate metrics
         self.val_acc(y_hat,y)
         self.val_aps(y_hat,y)
         self.val_f1(y_hat,y)
-        self.val_mse(y_hat*6-8.5,y*6-8.5)
+        self.val_mse(y_hat,y)
         self.val_confusion_matrix.update(y_hat,y)
 
         self.log_dict({
