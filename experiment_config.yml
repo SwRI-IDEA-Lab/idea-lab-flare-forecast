@@ -1,13 +1,15 @@
 data:
-  augmentation: full
+  augmentation: conservative
   balance_ratio: 0
   channels:
-  - 3
-  - 5
-  - 7
-  data_file: Data/labels_regression_aiahmi.csv
+  - 0
+  data_file: Data/labels_regression_cleanedandchecked.csv
   dim: 128
   feature_cols:
+  - tot_us_flux
+  - tot_flux
+  - datamin
+  - datamax
   - flare_rate_y
   - flare_rate_m
   - flare_rate_w
@@ -20,12 +22,10 @@ data:
   forecast_window: 24
   label: flare
   maxval:
-  - 5
-  - 5
   - 500
   regression: true
-  test: ''
-  use_zarr_dataset: true
+  test: 'test_a'
+  use_zarr_dataset: false
   val_split: 0
   zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_1k.zarr
 meta:
@@ -34,13 +34,13 @@ meta:
   resume: false
   user: kierav
 model:
-  checkpoint_location: kierav/flare-forecast-regression/model-0d49hu0v:best_k
+  checkpoint_location: None
   dropout_ratio: 0
-  load_checkpoint: true
+  load_checkpoint: false
 testing:
   eval: true
   savedir: results
-  savefile: 24h_aia304_193_hmi_regression
+  savefile: 24h_historical_testa_regression
 training:
   batch_size: 256
   device: gpu
