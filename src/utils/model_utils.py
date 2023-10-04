@@ -21,7 +21,6 @@ def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True,download:bool
     Returns:
         classifier: litclass object with loaded weights
     """
-    #TODO: check local dir for model checkpoint if already downloaded
     print('Loading model checkpoint from ', ckpt_path)
     # check if already in local directory
     local_ckpt_path = glob.glob('artifacts/'+ckpt_path.split('/')[-1].strip(':best_k')+'*')
