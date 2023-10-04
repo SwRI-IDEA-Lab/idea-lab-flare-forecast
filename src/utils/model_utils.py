@@ -4,10 +4,11 @@ import pandas as pd
 from pathlib import Path
 import numpy as np
 import os
+import glob
 from utils.analysis_helper import print_metrics, print_regression_metrics
 import wandb
 
-def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True):
+def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True,download:bool=False):
     """
     Load model into wandb run by downloading and initializing weights
 
@@ -16,13 +17,19 @@ def load_model(run,ckpt_path,model,litclass=LitConvNet,strict=True):
         ckpt_path:  wandb path to download model checkpoint from
         model:      model instance
         litclass:   Lightning model class (must have a load_from_checkpoint function)
+        download:   flag to force load to always download ckpt from wandb
     Returns:
         classifier: litclass object with loaded weights
     """
     #TODO: check local dir for model checkpoint if already downloaded
     print('Loading model checkpoint from ', ckpt_path)
-    artifact = run.use_artifact(ckpt_path,type='model')
-    artifact_dir = artifact.download()
+    # check if already in local directory
+    local_ckpt_path = glob.glob('artifacts/'+ckpt_path.split('/')[-1].strip(':best_k')+'*')
+    if (len(local_ckpt_path)>0) and not download:
+        artifact_dir = local_ckpt_path[0]
+    else:
+        artifact = run.use_artifact(ckpt_path,type='model')
+        artifact_dir = artifact.download()
     classifier = litclass.load_from_checkpoint(Path(artifact_dir)/'model.ckpt',model=model,strict=strict)
     return classifier
 

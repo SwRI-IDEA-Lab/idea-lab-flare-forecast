@@ -93,7 +93,7 @@ def main():
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
-                         devices=[3],
+                         devices=[0],
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
