@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from model_regressor import convnet_sc_regressor,LitConvNetRegressor
 from data import MagnetogramDataModule
 from data_zarr import AIAHMIDataModule
-from mlp_model import MLPModel
+from src.mlp_model_regressor import MLPModel
 from utils.model_utils import *
 import pandas as pd
 from pathlib import Path
