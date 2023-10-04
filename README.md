@@ -20,7 +20,7 @@ The snakemake pipeline is able to download MDI and HMI data, however, the histor
 
 It takes a long time to index and clean the data (around 6 hours per year of data for HMI, which takes the longest since it is the highest resolution). This can be reduced by using multiple cores (nworkers in the snakemake_config file). 
 
-To train a single model on a  8GB GeForce RTX 3070 Ti GPU takes about 1.5 hours. Using pretraining and the ensemble of 5 models will then take around 15 hours.
+To just train the models, after data is downloaded and processed, modify the experiment_config.yml file and run the train_models_classification.py script. There is a flag in the config model for regression which should be set to false. To train a single model on a  8GB GeForce RTX 3070 Ti GPU takes about 1.5 hours. Using pretraining and the ensemble of 5 models will then take around 15 hours.
 
 ### Regression onto max X-ray Irradiance
 
@@ -36,4 +36,4 @@ Then label the data:
     python src/data_preprocessing/regression_labeller.py Data/index_all_smoothed.csv [out_file] [goesdir] -w [window]
 with [out_file] the name of the labels file to be created, [goesdir] the path to the GOES data and [window] the desired forecast window(s) in hours.
 
-Now modify the experiment_config.yml appropriately and run something like the train_models_regression.py script. 
+Now modify the experiment_config.yml appropriately and run something like the train_models_regression.py script. There is a regression flag in the config file that should be set to true. You can set the test to either 'test_a','test_b' or an empty string to toggle between tests. To train on a zarr dataset set the use_zarr_dataset flag. 
