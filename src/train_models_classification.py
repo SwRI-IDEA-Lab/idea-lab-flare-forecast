@@ -13,11 +13,9 @@ val_splits = 5
 
 for i in range(val_splits):
     config['data']['val_split'] = i
-    config['data']['forecast_window'] =24
 
     # first pretrain
     config['data']['label'] = 'high_flux'
-    config['data']['augmentation'] = 'conservative'
     config['model']['checkpoint_location'] = None
     config['model']['load_checkpoint'] = False
     config['testing']['eval'] = False
@@ -31,7 +29,6 @@ for i in range(val_splits):
     # run_id = highfluxmodels[i]
 
     config['data']['label'] = 'flare'
-    config['data']['augmentation'] = 'conservative'
     config['model']['checkpoint_location'] = config['meta']['user']+'/'+config['meta']['project']+'/model-'+run_id+':best_k'
     config['model']['load_checkpoint'] = True
     config['testing']['eval'] = True

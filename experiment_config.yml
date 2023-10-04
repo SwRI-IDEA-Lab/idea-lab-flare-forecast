@@ -25,7 +25,8 @@ data:
   - 500
   regression: true
   test: ''
-  val_split: 1
+  use_zarr_dataset: true
+  val_split: 0
   zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_1k.zarr
 meta:
   id: None
@@ -33,9 +34,9 @@ meta:
   resume: false
   user: kierav
 model:
-  checkpoint_location: None
+  checkpoint_location: kierav/flare-forecast-regression/model-0d49hu0v:best_k
   dropout_ratio: 0
-  load_checkpoint: false
+  load_checkpoint: true
 testing:
   eval: true
   savedir: results

@@ -45,23 +45,24 @@ def main():
     pl.seed_everything(42,workers=True)
 
     # define data module
-    # data = MagnetogramDataModule(data_file=config.data['data_file'],
-    #                              label=config.data['label'],
-    #                              balance_ratio=config.data['balance_ratio'],
-    #                              regression=config.data['regression'],
-    #                              val_split=config.data['val_split'],
-    #                              forecast_window=config.data['forecast_window'],
-    #                              dim=config.data['dim'],
-    #                              batch=config.training['batch_size'],
-    #                              augmentation=config.data['augmentation'],
-    #                              flare_thresh=config.data['flare_thresh'],
-    #                              flux_thresh=config.data['flux_thresh'],
-    #                              feature_cols=config.data['feature_cols'],
-    #                              test=config.data['test'],
-    #                              maxval=config.data['maxval'],
-    #                              file_col=config.data['file_col'])
-    
-    data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+    if not config.data['use_zarr_dataset']:
+        data = MagnetogramDataModule(data_file=config.data['data_file'],
+                                    label=config.data['label'],
+                                    balance_ratio=config.data['balance_ratio'],
+                                    regression=config.data['regression'],
+                                    val_split=config.data['val_split'],
+                                    forecast_window=config.data['forecast_window'],
+                                    dim=config.data['dim'],
+                                    batch=config.training['batch_size'],
+                                    augmentation=config.data['augmentation'],
+                                    flare_thresh=config.data['flare_thresh'],
+                                    flux_thresh=config.data['flux_thresh'],
+                                    feature_cols=config.data['feature_cols'],
+                                    test=config.data['test'],
+                                    maxval=config.data['maxval'],
+                                    file_col=config.data['file_col'])
+    else:
+        data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
                             val_split=config.data['val_split'],
                             data_file=config.data['data_file'],
                             regression=config.data['regression'],

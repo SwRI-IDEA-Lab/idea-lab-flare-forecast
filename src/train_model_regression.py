@@ -35,23 +35,24 @@ def main():
     print('Features:',config.data['feature_cols'])
 
     # define data module
-    # data = MagnetogramDataModule(data_file=config.data['data_file'],
-    #                              label=config.data['label'],
-    #                              balance_ratio=config.data['balance_ratio'],
-    #                              regression=config.data['regression'],
-    #                              val_split=config.data['val_split'],
-    #                              forecast_window=config.data['forecast_window'],
-    #                              dim=config.data['dim'],
-    #                              batch=config.training['batch_size'],
-    #                              augmentation=config.data['augmentation'],
-    #                              flare_thresh=config.data['flare_thresh'],
-    #                              flux_thresh=config.data['flux_thresh'],
-    #                              feature_cols=config.data['feature_cols'],
-    #                              test=config.data['test'],
-    #                              maxval=config.data['maxval'],
-    #                              file_col=config.data['file_col'])
-    
-    data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
+    if not config.data['use_zarr_dataset']:
+        data = MagnetogramDataModule(data_file=config.data['data_file'],
+                                    label=config.data['label'],
+                                    balance_ratio=config.data['balance_ratio'],
+                                    regression=config.data['regression'],
+                                    val_split=config.data['val_split'],
+                                    forecast_window=config.data['forecast_window'],
+                                    dim=config.data['dim'],
+                                    batch=config.training['batch_size'],
+                                    augmentation=config.data['augmentation'],
+                                    flare_thresh=config.data['flare_thresh'],
+                                    flux_thresh=config.data['flux_thresh'],
+                                    feature_cols=config.data['feature_cols'],
+                                    test=config.data['test'],
+                                    maxval=config.data['maxval'],
+                                    file_col=config.data['file_col'])
+    else:
+        data = AIAHMIDataModule(zarr_file=config.data['zarr_file'],
                             val_split=config.data['val_split'],
                             data_file=config.data['data_file'],
                             regression=config.data['regression'],
@@ -108,7 +109,7 @@ def main():
 
     # train model
     trainer = pl.Trainer(accelerator=config.training['device'],
-                         devices=[3],
+                         devices=[0],
                          deterministic=False,
                          max_epochs=config.training['epochs'],
                          callbacks=[ModelSummary(max_depth=2),early_stop_callback,checkpoint_callback],
@@ -128,8 +129,8 @@ def main():
         save_preds(preds,wandb.run.dir,'trainval_results.csv',config.data['regression'])
 
         print('------Pseudotest predictions------')
-        # preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
-        # save_preds(preds,wandb.run.dir,'pseudotest_results.csv',config.data['regression'])
+        preds = trainer.predict(model=classifier,dataloaders=data.pseudotest_dataloader())
+        save_preds(preds,wandb.run.dir,'pseudotest_results.csv',config.data['regression'])
 
         print('------Test predictions------')
         preds = trainer.predict(model=classifier,dataloaders=data.test_dataloader())
