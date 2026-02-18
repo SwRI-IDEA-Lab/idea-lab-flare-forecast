@@ -24,19 +24,19 @@ data:
   maxval:
   - 500
   regression: true
-  test: 'test_a'
+  test: test_a
   use_zarr_dataset: false
-  val_split: 0
-  zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2023_1d_1k.zarr
+  val_split: 4
+  zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2024_1d_1k.zarr
 meta:
   id: None
   project: flare-forecast-regression
   resume: false
-  user: kierav
+  user: jasmine-kobayashi
 model:
-  checkpoint_location: None
+  checkpoint_location: jasmine-kobayashi/flare-forecast-regression/model-msq0xtd9:best_k
   dropout_ratio: 0
-  load_checkpoint: false
+  load_checkpoint: true
 testing:
   eval: true
   savedir: results
