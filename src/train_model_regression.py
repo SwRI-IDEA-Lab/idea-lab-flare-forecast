@@ -17,6 +17,8 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 import yaml
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+
 def main():    
     # read in config file
     with open('experiment_config.yml') as config_file:
@@ -29,7 +31,7 @@ def main():
     config = wandb.config
 
     # set seeds
-    pl.seed_everything(42,workers=True)
+    pl.seed_everything(696,workers=True)
 
     #
     print('Features:',config.data['feature_cols'])

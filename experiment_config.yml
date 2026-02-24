@@ -20,7 +20,7 @@ data:
   flare_thresh: 1.0e-05
   flux_thresh: 15000000
   forecast_window: 24
-  label: flare
+  label: high_flux
   maxval:
   - 500
   regression: true
