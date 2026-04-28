@@ -156,3 +156,6 @@ regression_paper/*
 
 # eval scripts
 src/eval_models.py
+
+# other
+.vscode/
