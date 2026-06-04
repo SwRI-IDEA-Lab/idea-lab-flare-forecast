@@ -4,7 +4,7 @@ from utils.analysis_helper import *
 import train_model_regression
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 with open('experiment_config.yml') as config_file:
     config = yaml.safe_load(config_file.read())
