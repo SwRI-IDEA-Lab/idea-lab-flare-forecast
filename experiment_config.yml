@@ -26,7 +26,7 @@ data:
   regression: true
   test: test_a
   use_zarr_dataset: false
-  val_split: 4
+  val_split: 0
   zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2024_1d_1k.zarr
 meta:
   id: None
@@ -34,7 +34,7 @@ meta:
   resume: false
   user: jasmine-kobayashi
 model:
-  checkpoint_location: jasmine-kobayashi/flare-forecast-regression/model-msq0xtd9:best_k
+  checkpoint_location: jasmine-kobayashi/flare-forecast-regression/model-7zzhgy40:best_k
   dropout_ratio: 0
   load_checkpoint: true
 testing:
