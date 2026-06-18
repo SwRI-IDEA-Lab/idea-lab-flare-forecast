@@ -119,7 +119,7 @@ class MagnetogramDataSet(Dataset):
             img = img/self.maxval
 
         label = self.label_frame.iloc[idx]
-        features = torch.Tensor(self.features.iloc[idx])
+        features = torch.Tensor(self.features.iloc[idx].to_numpy(dtype=np.float32))
 
         # transform image
         img = self.transform(img)
