@@ -27,7 +27,7 @@ def main():
 
     
     # load config from specified wandb run
-    run = wandb.init(project=config['meta']['project'],resume='must',id=config['meta']['id'])
+    run = wandb.init(project=config['meta']['project'],resume=config['meta']['resume'],id=config['meta']['id'])
     config = wandb.config
 
     if config.data['regression']:
@@ -82,7 +82,7 @@ def main():
                                  weights=[],dropoutRatio=config.model['dropout_ratio'])
 
     # load checkpoint
-    classifier = load_model(run, 'kierav/'+config.meta['project']+'/model-'+run.id+':latest', model,litclass=litclass)
+    classifier = load_model(run, 'jasmine-kobayashi/'+config.meta['project']+'/model-'+run.id+':latest', model,litclass=litclass)
 
     for name, layer in model.named_modules():
         if isinstance(layer, torch.nn.Linear):
