@@ -29,9 +29,9 @@ data:
   val_split: 0
   zarr_file: /d0/euv/aia/preprocessed/aia_hmi_stacks_2010_2024_1d_1k.zarr
 meta:
-  id: None
+  id: oglb3obx
   project: flare-forecast-regression
-  resume: false
+  resume: true
   user: jasmine-kobayashi
 model:
   checkpoint_location: jasmine-kobayashi/flare-forecast-regression/model-7zzhgy40:best_k
